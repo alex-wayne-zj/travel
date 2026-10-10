@@ -49,7 +49,7 @@ await page.getByRole('combobox',{name:'行程时区',exact:true}).selectOption('
   for(let attempt=0;attempt<2;attempt++){
    await page.locator('.workspace').evaluate(e=>{e.scrollTop=0;});await page.getByRole('button',{name:'保存旅程',exact:true}).click();
    await page.waitForFunction(()=>document.activeElement?.classList.contains('editor-status'));
-   const status=await page.locator('.editor-status').boundingBox();assert.ok(status.y>=0&&status.y+status.height<=height+1,'repeated errors must remain visible');
+   const status=await page.locator('.editor-status').boundingBox();assert.ok(status.y>=0&&status.y+status.height<=height+1,'repeated errors must remain visible: '+JSON.stringify({attempt,status,height}));
   }
  }
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual(errors,[]);results.push({width,legacyPreserved:true,calendarDefault:true,blurValidationStable:true,countries:true,zoneModes:true,save:true,other:true,errors});await page.close();

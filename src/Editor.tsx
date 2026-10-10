@@ -13,8 +13,8 @@ import './editor.css';
 const uid=()=>crypto.randomUUID();
 type EditorProps={trip:Trip|null;onSave:(input:TripInput)=>Promise<void>;onCancel:()=>void;onPick?:(lat:number,lng:number,onConfirm:(lat:number,lng:number)=>void)=>void;onDirty?:(dirty:boolean)=>void;onDelete?:()=>void};
 export default function Editor({trip,onSave,onCancel,onPick,onDirty,onDelete}:EditorProps){
- const confirm=useConfirmation(),errorRef=useRef<HTMLDivElement>(null),errorFocusTimer=useRef(0);
- useEffect(()=>()=>clearTimeout(errorFocusTimer.current),[]);
+ const confirm=useConfirmation(),errorRef=useRef<HTMLDivElement>(null),errorFocusFrame=useRef(0),errorObserver=useRef<ResizeObserver|null>(null);
+ useEffect(()=>()=>{cancelAnimationFrame(errorFocusFrame.current);errorObserver.current?.disconnect();},[]);
  const [basics,setBasics]=useState<BasicsValues>(()=>({name:trip?.name||'',destinations:readDestination(trip?.destination||''),start:trip?.startDate||'',end:trip?.endDate||'',timezone:trip?.timezone||''}));
  const [days,setDays]=useState<Day[]>(()=>structuredClone(trip?.days||[]));
  const [selected,setSelected]=useState(0),[open,setOpen]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[submitted,setSubmitted]=useState(false),[applyMessage,setApplyMessage]=useState('');
@@ -24,7 +24,14 @@ export default function Editor({trip,onSave,onCancel,onPick,onDirty,onDelete}:Ed
  useEffect(()=>{onDirty?.(dirty);return()=>onDirty?.(false);},[dirty,onDirty]);
  const day=days[selected];
  // Focus after expansion so a clipped alert cannot scroll below the viewport.
- function reportError(message:string){setError(message);clearTimeout(errorFocusTimer.current);errorFocusTimer.current=window.setTimeout(()=>{const target=errorRef.current;if(!target||target.closest('[inert],[hidden]'))return;target.scrollIntoView({block:'nearest'});target.focus({preventScroll:true});},matchMedia('(prefers-reduced-motion: reduce)').matches?0:260);}
+ function reportError(message:string){
+  setError(message);cancelAnimationFrame(errorFocusFrame.current);errorObserver.current?.disconnect();errorRef.current?.blur();
+  errorFocusFrame.current=requestAnimationFrame(()=>{
+   const target=errorRef.current,panel=target?.closest<HTMLElement>('.motion-panel');if(!target||!panel)return;
+   const focus=()=>{if(target.closest('[inert],[hidden]')){errorObserver.current?.disconnect();return;}const bounds=panel.getBoundingClientRect();if(!bounds.height||bounds.bottom+.5<target.getBoundingClientRect().bottom)return;errorObserver.current?.disconnect();target.scrollIntoView({block:'nearest'});target.focus({preventScroll:true});};
+   errorObserver.current=new ResizeObserver(focus);errorObserver.current.observe(panel);focus();
+  });
+ }
  function changeBasics(patch:Partial<BasicsValues>){setBasics(b=>({...b,...patch}));if('start'in patch||'end'in patch)setApplyMessage('');}
  async function applyDates(){
   setApplyMessage('');
