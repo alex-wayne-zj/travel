@@ -130,14 +130,22 @@ print(json.dumps({'overview':None if cached else pack,'days':{} if cached else {
                      'endDate': '2026-10-12', 'timezone': 'Europe/Berlin',
                      'days': [{'id': 'day-1', 'date': '2026-10-12', 'city': '', 'title': '', 'events': []}],
                      'packing': {'extraItems': [], 'checkedIds': [], 'hiddenBaseIds': [], 'notes': ''}}
+            draft['days'][0]['events'] = [
+                {'id': f'place-{index}', 'title': kind, 'kind': kind,
+                 'slot': 'morning' if index % 2 == 0 else 'afternoon',
+                 'lat': -33.86, 'lng': 151.21, 'note': ''}
+                for index, kind in enumerate(['nature', 'visit', 'shopping', 'activity'])]
             assert request('POST', '/api/trips', draft, cookie)[0] == 403
             assert request('POST', '/api/trips', draft, cookie, csrf, 'https://evil.test')[0] == 403
             status, trip, _ = request('POST', '/api/trips', draft, cookie, csrf)
             assert status == 201 and trip['version'] == 1 and trip['packing']['baseItems']
+            assert trip['days'] == draft['days']
             api_path = '/api/trips/' + trip['id']
             draft['version'] = 1
+            draft['days'][0]['events'].reverse()
             status, saved, _ = request('PUT', api_path, draft, cookie, csrf)
             assert status == 200 and saved['version'] == 2
+            assert saved['days'] == draft['days']
             assert request('PUT', api_path, draft, cookie, csrf)[0] == 409
             assert session['role'] == 'admin'
             status, invites, _ = request('GET', '/api/invites', cookie=cookie)
@@ -202,6 +210,7 @@ print(json.dumps({'overview':None if cached else pack,'days':{} if cached else {
             start()
             status, restored, _ = request('GET', api_path, cookie=cookie)
             assert status == 200 and restored['version'] == 2
+            assert restored['days'] == draft['days']
             pw.write_text(replacement)
             cli('reset-password', '--username', 'admin', '--password-file', str(pw))
             assert request('GET', api_path, cookie=cookie)[0] == 401

@@ -1,4 +1,4 @@
-export type Kind = 'flight'|'train'|'taxi'|'food'|'sight'|'hotel'|'walk';
+export type Kind = 'flight'|'train'|'taxi'|'food'|'sight'|'hotel'|'walk'|'nature'|'visit'|'shopping'|'activity';
 // Times are optional booking details, never required for a place or cuisine wish.
 export interface Event {id:string;time?:string;endTime?:string;title:string;kind:Kind;lat:number;lng:number;to?:{lat:number;lng:number;name:string};note:string;slot?:'breakfast'|'morning'|'lunch'|'afternoon'|'dinner'|'transport'|'stay'|'alternative';alternative?:boolean;recommendation?:string;sourceUrl?:string;fullName?:string;address?:string;stayLabel?:string;checkInDate?:string;checkOutDate?:string;nights?:number}
 // Keep legacy "alternative" slots readable; backup status is now independent of time slots.

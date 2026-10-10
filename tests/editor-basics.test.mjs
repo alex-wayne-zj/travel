@@ -27,3 +27,12 @@ test('extracted event validation keeps map, booking and reference boundaries',()
  invalid=clone();invalid[0].events[0].sourceUrl='http://example.com';assert.throws(()=>validateEvents(invalid),/HTTPS/);
  invalid=clone();invalid[0].events[0].endTime='00:00';assert.throws(()=>validateEvents(invalid),/结束时间/);
 });
+
+test('daytime activity types expose four choices and keep legacy display compatible',async()=>{
+ const {allowed,editorKind}=await import('../src/editor-options.ts');
+ for(const slot of ['morning','afternoon'])assert.deepEqual(allowed(slot),['nature','visit','shopping','activity']);
+ assert.equal(editorKind({kind:'sight',slot:'morning'}),'visit');
+ assert.equal(editorKind({kind:'walk',slot:'afternoon'}),'activity');
+ assert.equal(editorKind({kind:'walk',slot:'transport'}),'walk');
+ assert.ok(allowed('transport').includes('walk'));
+});

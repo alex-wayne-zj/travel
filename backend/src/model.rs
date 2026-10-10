@@ -193,7 +193,12 @@ pub fn validate_trip(t: &TripInput) -> Result<(), String> {
             }
             text(e, "title", 300, true)?;
             let kind = text(e, "kind", 20, true)?.unwrap();
-            if !["flight", "train", "taxi", "food", "sight", "hotel", "walk"].contains(&kind) {
+            if ![
+                "flight", "train", "taxi", "food", "sight", "hotel", "walk", "nature", "visit",
+                "shopping", "activity",
+            ]
+            .contains(&kind)
+            {
                 return Err("invalid kind".into());
             }
             if !coord(e, "lat", 90.) || !coord(e, "lng", 180.) {
@@ -213,7 +218,9 @@ pub fn validate_trip(t: &TripInput) -> Result<(), String> {
             }
             if let Some(slot) = text(e, "slot", 20, false)? {
                 let compatible = match slot {
-                    "morning" | "afternoon" => ["sight", "walk"].contains(&kind),
+                    "morning" | "afternoon" => {
+                        ["sight", "walk", "nature", "visit", "shopping", "activity"].contains(&kind)
+                    }
                     "breakfast" | "lunch" | "dinner" => kind == "food",
                     "transport" => ["flight", "train", "taxi", "walk"].contains(&kind),
                     "stay" => kind == "hotel",

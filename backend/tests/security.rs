@@ -1412,3 +1412,44 @@ fn schema1_migration_preserves_admin_trips_template_sessions() {
         2
     );
 }
+
+#[test]
+fn activity_types_keep_legacy_and_coordinate_boundaries() {
+    let mut trip: travel_backend::model::TripInput = serde_json::from_value(json!({
+        "name":"Type and location test","destination":"德国","startDate":"2026-10-12",
+        "endDate":"2026-10-12","timezone":"Europe/Berlin","days":[{
+            "id":"day-one","date":"2026-10-12","city":"","title":"","events":[{
+                "id":"event-one","title":"A place","kind":"visit","slot":"morning",
+                "lat":0,"lng":0,"note":""
+            }]
+        }],"packing":{"extraItems":[],"checkedIds":[],"hiddenBaseIds":[],"notes":""}
+    }))
+    .unwrap();
+    for kind in ["nature", "visit", "shopping", "activity", "sight", "walk"] {
+        for slot in ["morning", "afternoon"] {
+            trip.days[0]["events"][0]["kind"] = json!(kind);
+            trip.days[0]["events"][0]["slot"] = json!(slot);
+            assert!(
+                travel_backend::model::validate_trip(&trip).is_ok(),
+                "{kind}/{slot}"
+            );
+        }
+    }
+    trip.days[0]["events"][0]["kind"] = json!("nature");
+    trip.days[0]["events"][0]["slot"] = json!("transport");
+    assert!(travel_backend::model::validate_trip(&trip).is_err());
+    trip.days[0]["events"][0]["slot"] = json!("morning");
+    for (lat, lng, accepted) in [
+        (90., 180., true),
+        (-90., -180., true),
+        (90.001, 0., false),
+        (0., -180.001, false),
+    ] {
+        trip.days[0]["events"][0]["lat"] = json!(lat);
+        trip.days[0]["events"][0]["lng"] = json!(lng);
+        assert_eq!(
+            travel_backend::model::validate_trip(&trip).is_ok(),
+            accepted
+        );
+    }
+}

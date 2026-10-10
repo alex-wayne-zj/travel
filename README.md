@@ -1,4 +1,4 @@
-# 旅迹 Travel
+# 旅途 Travel
 
 私人旅行规划应用。React + TypeScript + Vite、Rust Axum、SQLite、systemd 与 Nginx HTTPS；不使用 Docker 或独立数据库服务。账号、行程和部署配置由使用者自行管理。
 

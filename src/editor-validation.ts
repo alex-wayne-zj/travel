@@ -23,9 +23,9 @@ export function validateEvents(days:Day[]):void {
   for(const event of day.events){
    const prefix=`${day.date} · ${event.title||'未命名活动'}`;
    if(!event.title.trim())throw Error(`${prefix}：请填写名称。`);
-   if(!validLocation(event.lat,event.lng))throw Error(`${prefix}：请在地图上选择活动位置。`);
+   if(!validLocation(event.lat,event.lng))throw Error(`${prefix}：请地图选点或填写有效经纬度。`);
    if(event.to&&(!event.to.name.trim()||!validLocation(event.to.lat,event.to.lng)))
-    throw Error(`${prefix}：请填写终点名称并在地图上选择终点。`);
+    throw Error(`${prefix}：请填写终点名称及有效位置。`);
    if((event.time&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(event.time))||
       (event.endTime&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(event.endTime)))
     throw Error(`${prefix}：时间格式应为 HH:mm。`);

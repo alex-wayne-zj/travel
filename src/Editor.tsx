@@ -5,7 +5,7 @@ import {useConfirmation} from './ConfirmDialog';
 import EditorActivities from './EditorActivities';
 import TripBasics,{basicsErrors,type BasicsValues} from './TripBasics';
 import {readDestination,destinationText} from './destinations';
-import {slots,allowed} from './editor-options';
+import {slots,allowed,editorKind} from './editor-options';
 import {dates,validateEvents} from './editor-validation';
 import './editor.css';
 
@@ -36,13 +36,13 @@ export default function Editor({trip,onSave,onCancel,onPick,onDirty,onDelete}:Ed
  function changeEvent(id:string,patch:Partial<Event>){
   const current=day?.events.find(e=>e.id===id);if(!current)return;
   if(patch.slot&&patch.alternative===undefined)patch.alternative=isAlternative(current);
-  if(patch.slot&&!allowed(patch.slot).includes(current.kind))patch.kind=allowed(patch.slot)[0];
+  if(patch.slot&&!allowed(patch.slot).includes(editorKind({...current,slot:patch.slot})))patch.kind=allowed(patch.slot)[0];
   if(patch.kind&&!['flight','train','taxi','walk'].includes(patch.kind))patch.to=undefined;
   changeDay({events:day.events.map(e=>e.id===id?{...e,...patch}:e)});
  }
  function add(slot:Event['slot']){
   if(!day)return;if(day.events.length>=40){reportError('每天最多 40 项活动。');return;}
-  const event:Event={id:uid(),title:'',kind:['breakfast','lunch','dinner'].includes(slot||'')?'food':slot==='stay'?'hotel':slot==='transport'?'train':'sight',slot,alternative:false,lat:NaN,lng:NaN,note:''};
+  const event:Event={id:uid(),title:'',kind:['breakfast','lunch','dinner'].includes(slot||'')?'food':slot==='stay'?'hotel':slot==='transport'?'train':'visit',slot,alternative:false,lat:NaN,lng:NaN,note:''};
   changeDay({events:[...day.events,event]});setOpen(event.id);setError('');
  }
  async function save(){
@@ -63,7 +63,7 @@ export default function Editor({trip,onSave,onCancel,onPick,onDirty,onDelete}:Ed
    <fieldset disabled={busy} className="editor-day">
     <div className="editor-day-meta"><label>当天城市<input maxLength={200} value={day.city} onChange={e=>changeDay({city:e.target.value})}/></label><label>当天主题<input maxLength={300} value={day.title} onChange={e=>changeDay({title:e.target.value})} placeholder="例如 老城与河畔漫步"/></label></div>
     <div className="editor-add">{slots.map(([slot,label])=><button key={slot} onClick={()=>add(slot)}>＋ {label}</button>)}</div>
-    {day.events.length===0&&<p className="editor-empty">这一天还没有活动。可先添加景点与想吃的地方。</p>}
+    {day.events.length===0&&<p className="editor-empty">这一天还没有活动。可先添加活动与想吃的地方。</p>}
     <EditorActivities key={day.id} events={day.events} open={open} onOpen={setOpen} onOrder={events=>changeDay({events})} onChange={changeEvent} onDelete={id=>{changeDay({events:day.events.filter(e=>e.id!==id)});setOpen(null);}} onPick={onPick} busy={busy}/>
 
    </fieldset>

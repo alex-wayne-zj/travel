@@ -1,5 +1,6 @@
 import {isAlternative,planningSlot,type Event,type Kind} from './model';
-import {allowed,kinds,slots} from './editor-options';
+import {allowed,editorKind,kinds,slots} from './editor-options';
+import LocationEditor from './LocationEditor';
 import AnimatedEventBody from './AnimatedEventBody';
 import {useConfirmation} from './ConfirmDialog';
 
@@ -13,8 +14,6 @@ interface Props {
  dragging?:boolean;
  onPick?:(lat:number,lng:number,onConfirm:(lat:number,lng:number)=>void)=>void;
 }
-
-const located=(lat:number,lng:number)=>Number.isFinite(lat)&&Number.isFinite(lng);
 
 export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onPick,handle,dragging}:Props){
  const confirm=useConfirmation();
@@ -37,7 +36,7 @@ export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onP
     <input maxLength={300} value={e.title} onChange={x=>onChange({title:x.target.value})}/>
    </label>
    <label>类型
-    <select aria-label="类型" value={e.kind} onChange={x=>onChange({kind:x.target.value as Kind})}>
+    <select aria-label="类型" value={editorKind(e)} onChange={x=>onChange({kind:x.target.value as Kind})}>
      {allowed(slot).map(k=><option key={k} value={k}>{kinds[k]}</option>)}
     </select>
    </label>
@@ -50,9 +49,7 @@ export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onP
     <input type="checkbox" checked={isAlternative(e)} onChange={x=>onChange({alternative:x.target.checked,slot})}/>
     作为备选<small>备选不会加入路线预览</small>
    </label>
-   {onPick&&<button className="editor-pick editor-wide" onClick={()=>onPick(e.lat,e.lng,(lat,lng)=>onChange({lat,lng}))}>
-    <span>地图选点 · 活动位置</span><small>{located(e.lat,e.lng)?'已选位置 · 点击更换':'尚未选点'}</small>
-   </button>}
+   <LocationEditor lat={e.lat} lng={e.lng} label="活动位置" onChange={(lat,lng)=>onChange({lat,lng})} onPick={onPick}/>
    <label>开始时间（可选）
     <input type="time" value={e.time||''} onChange={x=>onChange({time:x.target.value||undefined})}/>
    </label>
@@ -77,9 +74,7 @@ export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onP
      <label className="editor-wide">终点名称
       <input maxLength={300} value={e.to.name} onChange={x=>onChange({to:{...e.to!,name:x.target.value}})}/>
      </label>
-     {onPick&&<button className="editor-pick editor-wide" onClick={()=>onPick(e.to!.lat,e.to!.lng,(lat,lng)=>onChange({to:{...e.to!,lat,lng}}))}>
-      <span>地图选点 · 交通终点</span><small>{located(e.to.lat,e.to.lng)?'已选位置 · 点击更换':'尚未选点'}</small>
-     </button>}
+     <LocationEditor lat={e.to.lat} lng={e.to.lng} label="交通终点" onChange={(lat,lng)=>onChange({to:{...e.to!,lat,lng}})} onPick={onPick}/>
     </>}
    </>}
    {e.kind==='hotel'&&<>

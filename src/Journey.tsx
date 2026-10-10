@@ -2,7 +2,7 @@ import {useTimedMessage} from './useTimedMessage';
 import React,{useEffect,useRef,useState} from 'react';
 import {Map,Marker,NavigationControl,LngLatBounds,setWorkerUrl,type GeoJSONSource} from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import {Plane,TrainFront,Car,Utensils,Landmark,BedDouble,Footprints,Play,Pause,ChevronLeft,ChevronRight,MapPin,Route,Focus,RefreshCw} from 'lucide-react';
+import {Plane,TrainFront,Car,Utensils,Landmark,BedDouble,Footprints,Trees,ShoppingBag,Ticket,Play,Pause,ChevronLeft,ChevronRight,MapPin,Route,Focus,RefreshCw} from 'lucide-react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {api,type Trip} from './api';
 import Logo from './Logo';
@@ -12,9 +12,9 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 setWorkerUrl(workerUrl);
 
-const icons={flight:Plane,train:TrainFront,taxi:Car,food:Utensils,sight:Landmark,hotel:BedDouble,walk:Footprints};
-const labels:Record<Kind,string>={flight:'航班',train:'跨城交通',taxi:'交通',food:'想吃',sight:'想去',hotel:'住宿',walk:'想去'};
-const colors:Record<Kind,string>={flight:'#4568ab',train:'#176764',taxi:'#b88228',food:'#b85739',sight:'#176764',hotel:'#776085',walk:'#6a7a60'};
+const icons={flight:Plane,train:TrainFront,taxi:Car,food:Utensils,sight:Landmark,hotel:BedDouble,walk:Footprints,nature:Trees,visit:Landmark,shopping:ShoppingBag,activity:Ticket};
+const labels:Record<Kind,string>={flight:'航班',train:'跨城交通',taxi:'交通',food:'想吃',sight:'想去',hotel:'住宿',walk:'想去',nature:'自然',visit:'参观',shopping:'逛街',activity:'活动'};
+const colors:Record<Kind,string>={flight:'#4568ab',train:'#176764',taxi:'#b88228',food:'#b85739',sight:'#176764',hotel:'#776085',walk:'#6a7a60',nature:'#527b53',visit:'#176764',shopping:'#a26e46',activity:'#786789'};
 const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 function Icon({kind,size=18}:{kind:Kind,size?:number}) {const I=icons[kind];return <I size={size}/>;}
 function MapStage({tripId,days,day,event,progress,scope,follow,onFollow,onSelect,onProvider,retry}:{tripId:string,days:Day[],day:Day,event:Event|undefined,progress:number,scope:'day'|'trip'|'event',follow:boolean,onFollow:(x:boolean)=>void,onSelect:(id:string)=>void,onProvider:(provider:'openfreemap'|'protomaps')=>void,retry:number}){
@@ -53,7 +53,7 @@ export default function Journey({trip,onEdit}:{trip:Trip,onEdit:()=>void}) {
  const dayIndex=cursor.day,day=days[dayIndex],event=day.events[cursor.event];
  const dateRail=useRef<HTMLElement>(null),drag=useRef<{x:number;scroll:number;moved:boolean}|null>(null);
  const transport=day.events.filter(e=>planningSlot(e)==='transport'&&!isAlternative(e)),hotel=day.events.find(e=>e.kind==='hotel'&&!isAlternative(e));
- const primary=day.events.filter(e=>!isAlternative(e)&&['sight','food','walk'].includes(e.kind)&&planningSlot(e)!=='transport');
+ const primary=day.events.filter(e=>!isAlternative(e)&&['sight','food','walk','nature','visit','shopping','activity'].includes(e.kind)&&planningSlot(e)!=='transport');
  const planner=useRef<HTMLElement>(null);
  useEffect(()=>{const card=Array.from(planner.current?.querySelectorAll<HTMLElement>('[data-event]')||[]).find(el=>el.dataset.event===event?.id);if(!card)return;const rail=card.parentElement;if(!rail?.matches('.primary-wishes,.backup-wishes'))return;const a=card.getBoundingClientRect(),b=rail.getBoundingClientRect();if(a.left<b.left||a.right>b.right)rail.scrollBy({left:a.left<b.left?a.left-b.left:a.right-b.right,behavior:reduced()?'instant':'smooth'});},[event?.id]);
  const alternatives=day.events.filter(e=>isAlternative(e));
@@ -97,7 +97,7 @@ export default function Journey({trip,onEdit}:{trip:Trip,onEdit:()=>void}) {
   </button>;
  }
  return <main className="journey">
-  <header><a className="brand" href="#journey" aria-label="旅迹首页"><Logo size={28}/><span>旅迹</span></a><div className="trip-title"><h1>{trip.name}</h1><span>{trip.startDate} — {trip.endDate}</span></div><button className="preview" onClick={togglePreview} aria-label={playing?'暂停路线预览':'预览路线'}>{playing?<Pause size={16}/>:<Play size={16}/>}<span>{playing?'暂停':'预览路线'}</span></button></header>
+  <header><a className="brand" href="#journey" aria-label="旅途首页"><Logo size={28}/><span>旅途</span></a><div className="trip-title"><h1>{trip.name}</h1><span>{trip.startDate} — {trip.endDate}</span></div><button className="preview" onClick={togglePreview} aria-label={playing?'暂停路线预览':'预览路线'}>{playing?<Pause size={16}/>:<Play size={16}/>}<span>{playing?'暂停':'预览路线'}</span></button></header>
   <section className="map-stage" aria-label="旅程地图">
    <MapStage tripId={trip.id} onProvider={setProvider} days={days} day={day} event={event} progress={cursor.progress} scope={scope} follow={follow} onFollow={setFollow} onSelect={select} retry={retry}/>
    <div className="map-toolbar"><div className="segmented"><button aria-pressed={scope==='trip'} onClick={()=>{setScope('trip');setFollow(true);}}>全程</button><button aria-pressed={scope!=='trip'} onClick={()=>{setScope('day');setFollow(true);}}>当天</button></div><button className="follow" aria-label={follow?'跟随行程':'回到行程'} title={follow?'跟随行程':'回到行程'} onClick={()=>{setFollow(true);setScope('event');}}><Focus size={17}/></button><button className="retry" onClick={()=>setRetry(r=>r+1)} aria-label="重新加载地图" title="重新加载地图"><RefreshCw size={16}/></button></div>
