@@ -1,5 +1,6 @@
 import {isAlternative,planningSlot,type Event,type Kind} from './model';
 import {allowed,kinds,slots} from './editor-options';
+import AnimatedEventBody from './AnimatedEventBody';
 import {useConfirmation} from './ConfirmDialog';
 
 interface Props {
@@ -8,12 +9,14 @@ interface Props {
  onToggle:()=>void;
  onChange:(patch:Partial<Event>)=>void;
  onDelete:()=>void;
+ handle?:React.ReactNode;
+ dragging?:boolean;
  onPick?:(lat:number,lng:number,onConfirm:(lat:number,lng:number)=>void)=>void;
 }
 
 const located=(lat:number,lng:number)=>Number.isFinite(lat)&&Number.isFinite(lng);
 
-export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onPick}:Props){
+export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onPick,handle,dragging}:Props){
  const confirm=useConfirmation();
  const slot=planningSlot(e);
  async function remove(){
@@ -23,12 +26,13 @@ export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onP
   }))onDelete();
  }
 
- return <article className="editor-event">
-  <button className="editor-event-heading" aria-expanded={open} onClick={onToggle}>
+ return <article className={`editor-event${dragging?' sorting':''}`} data-event-id={e.id}>
+  <div className="editor-event-header">{handle}
+  <button className="editor-event-heading" aria-expanded={open} aria-controls={`event-body-${e.id}`} onClick={onToggle}>
    <span>{slots.find(s=>s[0]===slot)?.[1]||kinds[e.kind]}{isAlternative(e)?' · 备选':''}</span>
    <strong>{e.title||'新活动 · 待填写'}</strong><span>{open?'−':'＋'}</span>
-  </button>
-  {open&&<div className="editor-event-fields">
+  </button></div>
+  <AnimatedEventBody open={open} id={`event-body-${e.id}`}><div className="editor-event-fields">
    <label className="editor-wide">名称
     <input maxLength={300} value={e.title} onChange={x=>onChange({title:x.target.value})}/>
    </label>
@@ -99,6 +103,6 @@ export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onP
     </label>
    </>}
    <button className="editor-delete editor-wide" onClick={()=>void remove()}>删除活动</button>
-  </div>}
+  </div></AnimatedEventBody>
  </article>;
 }

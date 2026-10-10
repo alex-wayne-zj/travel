@@ -2,7 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import type {Trip,TripInput} from './api';
 import {isAlternative,type Day,type Event} from './model';
 import {useConfirmation} from './ConfirmDialog';
-import EditorEvent from './EditorEvent';
+import EditorActivities from './EditorActivities';
 import TripBasics,{basicsErrors,type BasicsValues} from './TripBasics';
 import {readDestination,destinationText} from './destinations';
 import {slots,allowed} from './editor-options';
@@ -32,7 +32,7 @@ export default function Editor({trip,onSave,onCancel,onPick,onDirty,onDelete}:Ed
    setDays(next.map(date=>days.find(d=>d.date===date)||{id:uid(),date,city:'',title:'',events:[]}));setSelected(0);setOpen(null);
   }catch(e){setApplyMessage((e as Error).message||'日期未能应用，请重试。');}
  }
- function changeDay(patch:Partial<Day>){setDays(ds=>ds.map((d,i)=>i===selected?{...d,...patch}:d));}
+ function changeDay(patch:Partial<Day>){if(!day)return;const id=day.id;setDays(ds=>ds.map(d=>d.id===id?{...d,...patch}:d));}
  function changeEvent(id:string,patch:Partial<Event>){
   const current=day?.events.find(e=>e.id===id);if(!current)return;
   if(patch.slot&&patch.alternative===undefined)patch.alternative=isAlternative(current);
@@ -64,7 +64,8 @@ export default function Editor({trip,onSave,onCancel,onPick,onDirty,onDelete}:Ed
     <div className="editor-day-meta"><label>当天城市<input maxLength={200} value={day.city} onChange={e=>changeDay({city:e.target.value})}/></label><label>当天主题<input maxLength={300} value={day.title} onChange={e=>changeDay({title:e.target.value})} placeholder="例如 老城与河畔漫步"/></label></div>
     <div className="editor-add">{slots.map(([slot,label])=><button key={slot} onClick={()=>add(slot)}>＋ {label}</button>)}</div>
     {day.events.length===0&&<p className="editor-empty">这一天还没有活动。可先添加景点与想吃的地方。</p>}
-    {day.events.map(event=><EditorEvent key={event.id} event={event} open={open===event.id} onToggle={()=>setOpen(open===event.id?null:event.id)} onChange={patch=>changeEvent(event.id,patch)} onDelete={()=>{changeDay({events:day.events.filter(e=>e.id!==event.id)});setOpen(null);}} onPick={onPick}/>)}
+    <EditorActivities key={day.id} events={day.events} open={open} onOpen={setOpen} onOrder={events=>changeDay({events})} onChange={changeEvent} onDelete={id=>{changeDay({events:day.events.filter(e=>e.id!==id)});setOpen(null);}} onPick={onPick} busy={busy}/>
+
    </fieldset>
   </div>}
   {error&&<div className="editor-status" ref={errorRef} tabIndex={-1} role="alert"><p className="editor-error">{error} <span>输入仍保留在此页。</span></p></div>}
