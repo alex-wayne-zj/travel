@@ -32,11 +32,11 @@ async function setup(width,height,reducedMotion='no-preference'){
  await page.goto(url);await page.locator('.journey').waitFor();await edit(page);return {page,state};
 }
 async function edit(page){await page.getByRole('button',{name:'编辑',exact:true}).click();await page.locator('.editor-event').first().waitFor();}
-const articles=page=>page.locator('.editor-event');
+const articles=page=>page.locator('.editor-events .editor-event');
 const heading=card=>card.locator('.editor-event-heading');
 const handle=card=>card.getByRole('button',{name:/调整顺序|拖动|排序/});
 async function order(page){return articles(page).locator('.editor-event-heading strong').allTextContents();}
-async function expectOrder(page,expected){try{await page.waitForFunction(expected=>JSON.stringify([...document.querySelectorAll('.editor-event-heading strong')].map(n=>n.textContent))===JSON.stringify(expected),expected,{timeout:5000});}catch(error){console.error(JSON.stringify({expected:expected.slice(0,6),actual:(await order(page)).slice(0,6),sorting:await page.locator('.editor-event.sorting').count()}));throw error;}}
+async function expectOrder(page,expected){try{await page.waitForFunction(expected=>JSON.stringify([...document.querySelectorAll('.editor-events .editor-event-heading strong')].map(n=>n.textContent))===JSON.stringify(expected),expected,{timeout:5000});}catch(error){console.error(JSON.stringify({expected:expected.slice(0,6),actual:(await order(page)).slice(0,6),sorting:await page.locator('.editor-event.sorting').count()}));throw error;}}
 async function closed(page){await page.waitForFunction(()=>![...document.querySelectorAll('.editor-event-heading')].some(n=>n.getAttribute('aria-expanded')==='true')&&!document.querySelector('.editor-event-fields'));}
 async function screenshot(page,name){await page.screenshot({path:'.artifacts/editor-order-'+name+'.png'});}
 async function visibleTargets(page,from,to){
@@ -49,6 +49,13 @@ async function visibleTargets(page,from,to){
 async function mouseStart(page,from,to){const pos=await visibleTargets(page,from,to);await page.mouse.move(pos.x,pos.y);await page.mouse.down();await page.mouse.move(pos.tx,pos.ty,{steps:12});return pos;}
 async function touch(page,type,points=[]){let session=inputSessions.get(page);if(!session){session=await page.context().newCDPSession(page);inputSessions.set(page,session);}await session.send('Input.dispatchTouchEvent',{type,touchPoints:points});}
 async function touchStart(page,from,to){const pos=await visibleTargets(page,from,to);await touch(page,'touchStart',[{x:pos.x,y:pos.y}]);for(let i=1;i<=6;i++)await touch(page,'touchMove',[{x:pos.x,y:pos.y+(pos.ty-pos.y)*i/6}]);return pos;}
+async function assertLift(page,pointer,isTouch=false){
+ const layer=page.locator('.editor-drag-layer');await layer.waitFor();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ const lifted=await layer.evaluate(n=>({inert:n.inert,hidden:n.getAttribute('aria-hidden'),y:n.getBoundingClientRect().top,handleY:n.querySelector('.editor-sort-handle').getBoundingClientRect().top+n.querySelector('.editor-sort-handle').getBoundingClientRect().height/2,shadow:getComputedStyle(n.querySelector('.editor-drag-card')).boxShadow}));
+ assert.equal(lifted.inert,true);assert.equal(lifted.hidden,'true');assert.notEqual(lifted.shadow,'none');const move=async y=>isTouch?touch(page,'touchMove',[{x:pointer.tx,y}]):page.mouse.move(pointer.tx,y);
+ await move(pointer.ty+12);await page.waitForFunction(y=>Math.abs(document.querySelector('.editor-drag-layer').getBoundingClientRect().top-y-12)<2,lifted.y,{timeout:2000});await move(pointer.ty);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ assert.equal(await page.locator('.editor-events .sorting .editor-event-header').evaluate(n=>getComputedStyle(n).opacity),'0','没有显示原位占位');
+}
 function moved(values,from,to){const next=[...values],value=next.splice(from,1)[0];next.splice(to,0,value);return next;}
 async function motionSample(page,index,open){
  return articles(page).nth(index).evaluate((card,open)=>new Promise(resolve=>{
@@ -73,12 +80,12 @@ try{
    const closedFrames=motionMetrics(await motionSample(page,0,false));await closed(page);
    assert.equal(await heading(articles(page).first()).evaluate(n=>n===document.activeElement),true,'收起后焦点没有返回标题');assert.equal(closedFrames.intermediate,true,'收起没有中间高度');result.motion={expanded,collapsed:closedFrames};
    // A mixed-slot drag reorders the actual array instead of regrouping by slot.
-   let expected=[...originalA];await mouseStart(page,0,2);await screenshot(page,'mouse-drag-'+width);await page.mouse.up();expected=moved(expected,0,2);await expectOrder(page,expected);
+   let expected=[...originalA];const pointer=await mouseStart(page,0,2);await assertLift(page,pointer);result.liftFollowsPointer=true;await screenshot(page,'mouse-drag-'+width);await page.mouse.up();expected=moved(expected,0,2);await expectOrder(page,expected);await page.waitForFunction(()=>!document.querySelector('.editor-drag-layer'));
    await handle(articles(page).nth(2)).focus();await page.keyboard.press('ArrowUp');expected=moved(expected,2,1);await expectOrder(page,expected);await page.keyboard.press('ArrowDown');expected=moved(expected,1,2);await expectOrder(page,expected);
    await handle(articles(page).first()).focus();await page.keyboard.press('ArrowUp');await expectOrder(page,expected);await page.keyboard.press('End');expected=moved(expected,0,39);await expectOrder(page,expected);await page.keyboard.press('Home');expected=moved(expected,39,0);await expectOrder(page,expected);result.keyboard=true;
    const beforeCancel=[...expected];await mouseStart(page,0,2);await page.keyboard.press('Escape');await page.mouse.up();await expectOrder(page,beforeCancel);result.escapeCancels=true;
    await touchStart(page,0,2);await touch(page,'touchCancel');await expectOrder(page,beforeCancel);result.pointerCancel=true;
-   await touchStart(page,0,2);await touch(page,'touchEnd');expected=moved(expected,0,2);await expectOrder(page,expected);result.touch=true;
+   const touchPointer=await touchStart(page,0,2);await assertLift(page,touchPointer,true);await touch(page,'touchEnd');expected=moved(expected,0,2);await expectOrder(page,expected);result.touch=true;
    if(width<600){
     await handle(articles(page).first()).scrollIntoViewIfNeeded();const grip=await handle(articles(page).first()).boundingBox();const beforeScroll=await page.locator('.workspace').evaluate(n=>n.scrollTop);
     await touch(page,'touchStart',[{x:grip.x+grip.width/2,y:grip.y+grip.height/2}]);await touch(page,'touchMove',[{x:grip.x+grip.width/2,y:height-18}]);await page.waitForTimeout(650);
@@ -96,6 +103,6 @@ try{
   }finally{await page.close();}
  }
  const reduced=await setup(375,667,'reduce');
- try{const card=articles(reduced.page).first();await card.scrollIntoViewIfNeeded();await heading(card).click();await reduced.page.waitForTimeout(35);assert.equal(await card.locator('.editor-event-fields').count(),1);await heading(card).click();await reduced.page.waitForTimeout(35);assert.equal(await card.locator('.editor-event-fields').count(),0,'减弱动画仍等待完整240ms');await reduced.page.locator('.editor-dates button').nth(1).click();await expectOrder(reduced.page,originalB);await mouseStart(reduced.page,0,2);await reduced.page.locator('.editor-add button').first().evaluate(n=>n.click());await reduced.page.mouse.up();await reduced.page.waitForFunction(()=>document.querySelectorAll('.editor-event').length===4);assert.deepEqual((await order(reduced.page)).slice(0,3),originalB,'新增导致取消时旧活动顺序未恢复');const ids=await articles(reduced.page).evaluateAll(nodes=>nodes.map(n=>n.dataset.eventId));assert.equal(new Set(ids).size,4,'新增ID丢失或重复');assert.deepEqual(ids.slice(0,3),seed.days[1].events.map(e=>e.id));await heading(articles(reduced.page).last()).click();await closed(reduced.page);assert.equal(await articles(reduced.page).count(),4);assert.deepEqual(reduced.state.errors,[]);results.push({width:375,reducedMotion:true,addingCancelsAndPreservesNewId:true});}finally{await reduced.page.close();}
+ try{const card=articles(reduced.page).first();await card.scrollIntoViewIfNeeded();await heading(card).click();await reduced.page.waitForTimeout(35);assert.equal(await card.locator('.editor-event-fields').count(),1);await heading(card).click();await reduced.page.waitForTimeout(35);assert.equal(await card.locator('.editor-event-fields').count(),0,'减弱动画仍等待完整240ms');await reduced.page.locator('.editor-dates button').nth(1).click();await expectOrder(reduced.page,originalB);await mouseStart(reduced.page,0,2);await reduced.page.locator('.editor-add button').first().evaluate(n=>n.click());await reduced.page.mouse.up();await reduced.page.waitForFunction(()=>document.querySelectorAll('.editor-events .editor-event').length===4);assert.deepEqual((await order(reduced.page)).slice(0,3),originalB,'新增导致取消时旧活动顺序未恢复');const ids=await articles(reduced.page).evaluateAll(nodes=>nodes.map(n=>n.dataset.eventId));assert.equal(new Set(ids).size,4,'新增ID丢失或重复');assert.deepEqual(ids.slice(0,3),seed.days[1].events.map(e=>e.id));await heading(articles(reduced.page).last()).click();await closed(reduced.page);assert.equal(await articles(reduced.page).count(),4);assert.deepEqual(reduced.state.errors,[]);results.push({width:375,reducedMotion:true,addingCancelsAndPreservesNewId:true});}finally{await reduced.page.close();}
 }finally{await browser.close();writeFileSync(process.argv.includes('--reduced-only')?'.artifacts/editor-order-extra.json':'.artifacts/editor-order-check.json',JSON.stringify({url,mapMock:true,results},null,2)+'\n');}
 console.log('活动动画、鼠标/触屏/键盘排序、取消、保存与日期隔离验收完成');

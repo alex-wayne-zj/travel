@@ -8,22 +8,51 @@ interface Props {
  onOrder:(events:Event[])=>void;onChange:(id:string,patch:Partial<Event>)=>void;onDelete:(id:string)=>void;
  onPick?:(lat:number,lng:number,onConfirm:(lat:number,lng:number)=>void)=>void;
 }
-interface Drag {id:string;pointer:number;x:number;y:number;startY:number;active:boolean;original:string[];handle:HTMLButtonElement}
+interface Drag {id:string;pointer:number;x:number;y:number;startX:number;startY:number;active:boolean;original:string[];handle:HTMLButtonElement;rect:DOMRect}
 
 export default function EditorActivities(props:Props){
  const {events,open,busy,onChange,onDelete,onPick}=props;
  const list=useRef<HTMLDivElement>(null),latest=useRef(props),current=useRef(events),drag=useRef<Drag|null>(null),frame=useRef(0),anchorFrame=useRef(0);
+ const floating=useRef<HTMLElement|null>(null),positions=useRef(new Map<string,number>()),animations=useRef(new Map<HTMLElement,Animation>());
  latest.current=props;current.current=events;
  const [dragging,setDragging]=useState<string|null>(null),[notice,setNotice]=useState('');
  const [settled,setSettled]=useState(open===null);
  useEffect(()=>{if(open!==null){setSettled(false);return;}if(matchMedia('(prefers-reduced-motion: reduce)').matches){setSettled(true);return;}const timer=setTimeout(()=>setSettled(true),260);return()=>clearTimeout(timer);},[open]);
  const sortable=open===null&&settled&&events.length>1&&!busy;
- function order(next:Event[]){current.current=next;latest.current.onOrder(next);}
+ const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+ function order(next:Event[]){
+  // Continue from the visible position when another reorder interrupts a slide.
+  positions.current=new Map([...list.current?.querySelectorAll<HTMLElement>('.editor-event')||[]].map(card=>[card.dataset.eventId!,card.offsetTop+new DOMMatrixReadOnly(getComputedStyle(card).transform).m42]));
+  current.current=next;latest.current.onOrder(next);
+ }
+ function lift(state:Drag){
+  floating.current?.remove();
+  const card=state.handle.closest<HTMLElement>('.editor-event');if(!card)return;
+  const layer=document.createElement('div'),copy=card.cloneNode(true) as HTMLElement;
+  layer.className='trip-editor editor-drag-layer';layer.setAttribute('aria-hidden','true');layer.inert=true;
+  copy.classList.remove('sorting');copy.classList.add('editor-drag-card');
+  copy.removeAttribute('data-event-id');copy.querySelectorAll('[id]').forEach(node=>node.removeAttribute('id'));
+  layer.style.left=state.rect.left+'px';layer.style.top=state.rect.top+'px';layer.style.width=state.rect.width+'px';
+  layer.append(copy);document.body.append(layer);floating.current=layer;follow(state);
+ }
+ function follow(state:Drag){
+  const x=Math.max(4-state.rect.left,Math.min(innerWidth-state.rect.right-4,Math.max(-18,Math.min(18,state.x-state.startX))));
+  if(floating.current)floating.current.style.transform=`translate3d(${x}px,${state.y-state.startY}px,0)`;
+ }
  function restore(original:string[]){const byId=new Map(current.current.map(e=>[e.id,e]));return [...original.flatMap(id=>byId.has(id)?[byId.get(id)!]:[]),...current.current.filter(e=>!original.includes(e.id))];}
  function finish(cancel=false){
   const state=drag.current;drag.current=null;cancelAnimationFrame(frame.current);
   if(!state)return;
   if(state.active){if(cancel)order(restore(state.original));setNotice(cancel?'已取消排序':`已调整顺序，第 ${current.current.findIndex(e=>e.id===state.id)+1} 项`);}
+  const layer=floating.current;
+  if(layer){
+   layer.classList.add('landing');
+   const card=state.handle.closest<HTMLElement>('.editor-event'),target=card?.getBoundingClientRect();
+   if(target&&!cancel&&!reduced()){
+    const landing=layer.animate([{transform:layer.style.transform,opacity:1},{transform:`translate3d(${target.left-state.rect.left}px,${target.top-state.rect.top}px,0)`,opacity:0}],{duration:160,easing:'ease-out'});
+    landing.finished.catch(()=>{}).then(()=>{layer.remove();if(floating.current===layer)floating.current=null;});
+   }else{layer.remove();floating.current=null;}
+  }
   setDragging(null);
   if(state.handle.hasPointerCapture(state.pointer))state.handle.releasePointerCapture(state.pointer);
  }
@@ -37,18 +66,29 @@ export default function EditorActivities(props:Props){
  },[]);
  useEffect(()=>()=>{
   cancelAnimationFrame(frame.current);cancelAnimationFrame(anchorFrame.current);
+  floating.current?.remove();animations.current.forEach(animation=>animation.cancel());
   if(drag.current?.active)latest.current.onOrder(restore(drag.current.original));
  },[]);
  // Moving a keyed card can release capture; document listeners keep the gesture alive.
  useLayoutEffect(()=>{
   const state=drag.current;
   if(state?.active&&state.handle.isConnected&&!state.handle.hasPointerCapture(state.pointer))state.handle.setPointerCapture(state.pointer);
+  for(const card of list.current?.querySelectorAll<HTMLElement>('.editor-event')||[]){
+   const prior=positions.current.get(card.dataset.eventId!);animations.current.get(card)?.cancel();
+   if(prior!==undefined&&prior!==card.offsetTop&&card.dataset.eventId!==state?.id&&!reduced()){
+    const animation=card.animate([{transform:`translateY(${prior-card.offsetTop}px)`},{transform:'translateY(0)'}],{duration:180,easing:'ease-out'});
+    animations.current.set(card,animation);
+    animation.finished.catch(()=>{}).then(()=>{if(animations.current.get(card)===animation)animations.current.delete(card);});
+   }
+  }
+  positions.current.clear();
  },[events]);
  function moveAt(y:number){
   const state=drag.current;if(!state?.active||!list.current)return;
   const rest=current.current.filter(e=>e.id!==state.id);
   const cards=[...list.current.querySelectorAll<HTMLElement>('.editor-event')].filter(card=>card.dataset.eventId!==state.id);
-  let index=cards.findIndex(card=>{const r=card.getBoundingClientRect();return y<r.top+r.height/2;});if(index<0)index=rest.length;
+  const top=list.current.getBoundingClientRect().top;
+  let index=cards.findIndex(card=>y<top+card.offsetTop+card.offsetHeight/2);if(index<0)index=rest.length;
   if(index===current.current.findIndex(e=>e.id===state.id))return;
   const item=current.current.find(e=>e.id===state.id);if(!item)return;
   rest.splice(index,0,item);order(rest);
@@ -63,13 +103,14 @@ export default function EditorActivities(props:Props){
  function start(e:ReactPointerEvent<HTMLButtonElement>,id:string){
   if(!sortable||e.button!==0||!e.isPrimary||drag.current)return;
   e.currentTarget.setPointerCapture(e.pointerId);
-  drag.current={id,pointer:e.pointerId,x:e.clientX,y:e.clientY,startY:e.clientY,active:false,original:events.map(e=>e.id),handle:e.currentTarget};
+  const rect=e.currentTarget.closest<HTMLElement>('.editor-event')!.getBoundingClientRect();
+  drag.current={id,pointer:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,active:false,original:events.map(e=>e.id),handle:e.currentTarget,rect};
  }
  function move(e:PointerEvent){
   const state=drag.current;if(!state||state.pointer!==e.pointerId)return;
-  state.y=e.clientY;
-  if(!state.active&&Math.hypot(e.clientX-state.x,e.clientY-state.startY)>=6){state.active=true;setDragging(state.id);setNotice('正在调整活动顺序');frame.current=requestAnimationFrame(scrollEdge);}
-  if(state.active){e.preventDefault();moveAt(e.clientY);}
+  state.x=e.clientX;state.y=e.clientY;
+  if(!state.active&&Math.hypot(e.clientX-state.startX,e.clientY-state.startY)>=6){state.active=true;lift(state);setDragging(state.id);setNotice('正在调整活动顺序');frame.current=requestAnimationFrame(scrollEdge);}
+  if(state.active){e.preventDefault();follow(state);moveAt(e.clientY);}
  }
  function toggle(id:string){
   finish(true);cancelAnimationFrame(anchorFrame.current);

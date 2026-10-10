@@ -56,9 +56,10 @@
 .editor-event-header .editor-sort-handle{order:2}
 .trip-editor .editor-sort-handle{flex:0 0 44px;align-self:stretch;border:0;border-radius:0;background:transparent;padding:0;display:grid;place-items:center;color:#748a78;visibility:hidden;opacity:0;transition:opacity 180ms;touch-action:none;cursor:grab}
 .trip-editor .editor-sort-handle.available{visibility:visible;opacity:1}
-.editor-event.sorting{border-color:#317966;box-shadow:0 3px 14px #173e4220;background:#f0f5ed}
+.editor-event.sorting{border:1px dashed #83a493;box-shadow:none;background:#e9f0e7}
+.editor-event.sorting .editor-event-header{opacity:0}
 .editor-event.sorting .editor-sort-handle{cursor:grabbing;color:#176764}
-.editor-events{overflow-anchor:none}
+.editor-events{position:relative;overflow-anchor:none}
 .editor-sort-note{height:20px;margin:0 0 6px;font-size:11px;line-height:20px;color:#748385}
 .editor-sort-note[aria-hidden=true]{visibility:hidden}
 .editor-order-status{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
@@ -68,3 +69,8 @@
 @media(prefers-reduced-motion:reduce){.editor-event-reveal,.trip-editor .editor-sort-handle{transition:none}}
 
 .editor-events:has(.sorting){user-select:none}
+.trip-editor.editor-drag-layer{position:fixed;z-index:1000;width:auto;padding:0;background:none;pointer-events:none;will-change:transform;overflow:visible}
+.editor-drag-card{margin:0;border-color:#317966;box-shadow:0 14px 32px #173e4233,0 3px 8px #173e4220;background:#f8fcf5;transform:scale(1.012) rotate(.5deg);transform-origin:center;transition:transform 150ms ease-out}
+.editor-drag-card .editor-sort-handle{visibility:visible;opacity:1;color:#176764}
+.editor-drag-layer.landing .editor-drag-card{transform:none}
+@media(prefers-reduced-motion:reduce){.editor-drag-card{transform:none;transition:none}}
