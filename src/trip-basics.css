@@ -1,0 +1,53 @@
+.field-label{font-size:12px;line-height:1.5;color:#526c5b;display:block}
+.field-label small{font-size:11px;color:#849188;margin-left:6px}
+.field-placeholder{color:#849188}
+.basic-name,.destination-field{min-width:0;display:flex;flex-direction:column;gap:6px}
+.field-feedback{height:20px;min-height:20px;margin:0;padding-top:3px;font-size:11px;line-height:16px;color:#974833;overflow-wrap:anywhere}
+.trip-editor [aria-invalid=true]{border-color:#b46953}
+.basics-dates{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.trip-editor .date-value,.trip-editor .country-trigger{width:100%;display:flex;justify-content:space-between;align-items:center;text-align:left;gap:8px;color:#203d40;font-size:14px;font-variant-numeric:tabular-nums;background:#fff;min-width:0;padding:10px}
+.date-value svg,.country-trigger svg{flex-shrink:0;color:#65806c}
+.date-value:focus-visible,.country-trigger:focus-visible{outline:2px solid #317966;outline-offset:2px}
+.country-trigger span{min-width:0;overflow-wrap:anywhere}
+.selected-countries{display:flex;flex-wrap:wrap;gap:4px}
+.country-chip{background:#edf3e7;border-radius:5px;padding:2px 6px;font-size:12px}
+.country-empty{grid-column:1/-1;min-height:80px;margin:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#748385;text-align:center;padding:12px}
+.other-destination{margin-top:6px}
+.field-popover{position:fixed;z-index:80;width:min(460px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;border:1px solid #d6e1d6;border-radius:14px;background:#fff;box-shadow:0 12px 36px #173e421a;color:#203d40;padding:16px}
+.field-popover button{font:inherit;cursor:pointer;min-height:36px;border:0;border-radius:7px;color:inherit;background:transparent;padding:6px 10px}
+.field-popover button:focus-visible,.field-popover input:focus-visible{outline:2px solid #317966;outline-offset:2px}
+.field-popover button:hover{background:#eef3e9}
+.popover-heading{display:flex;align-items:center;justify-content:space-between;font-size:14px;margin-bottom:10px}
+.popover-heading strong{font-weight:500}.popover-heading button{display:grid;place-items:center;width:36px}
+.country-search{width:100%;border:1px solid #d6e1d6;border-radius:8px;padding:10px;font:inherit;font-size:14px;min-height:44px;margin-bottom:12px;background:#f8faf7;color:#203d40}
+.country-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;max-height:264px;overflow:auto}
+.country-options label,.country-popover-footer label{display:flex;align-items:center;gap:7px;font-size:13px;padding:8px 5px;min-height:40px;cursor:pointer;border-radius:6px}
+.country-options label:hover{background:#eef3e9}
+.country-options input,.country-popover-footer input{width:16px;height:16px;accent-color:#176764;margin:0;flex-shrink:0}
+.country-popover-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e5ebe2;margin-top:12px;padding-top:8px}
+.field-popover .popover-done{background:#173e42;color:#fff;padding-inline:16px}
+.trip-editor .timezone-field{grid-column:1/-1;width:min(100%,480px);justify-self:start;display:flex;flex-direction:column;gap:8px;padding-top:4px;border-top:1px solid #dce4d7}
+.timezone-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px}
+.timezone-value{padding:10px 12px;background:#fff;border:1px solid #d6e1d6;border-radius:8px;font-size:14px;min-height:44px;display:flex;align-items:center}
+.timezone-help{display:flex;align-items:baseline;justify-content:space-between;gap:8px;color:#748385;font-size:11px;line-height:1.6}
+.trip-editor .text-button{border:0;background:transparent;color:#176764;padding:2px 0;min-height:28px;font-size:11px;white-space:nowrap}
+.basics-apply{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.apply-feedback{height:20px;min-height:20px;font-size:12px;line-height:18px;margin:0;color:#974833}
+.basics-apply>button{min-width:92px;flex-shrink:0}
+.editor-status{margin-top:16px}
+.editor-status .editor-error{margin:0;padding:10px 12px}
+.editor-start{margin-top:24px;padding:22px 20px;border:1px dashed #d6e1d6;border-radius:12px;text-align:left;color:#748385;background:#f3f6ef}
+.editor-start h2{font-size:14px;font-weight:500;margin:0 0 8px;color:#526c5b}
+.editor-start p{font-size:13px;line-height:1.7;margin:0}
+.trip-editor .editor-workspace{padding-top:24px}
+.date-manual{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#526c5b;border-top:1px solid #e6ece3;padding-top:10px;margin-top:8px}
+.date-manual input{width:100%;min-height:44px;border:1px solid #d6e1d6;border-radius:8px;padding:10px;font:inherit;font-size:16px;color:#203d40;background:#fff}
+.date-manual input:focus-visible{outline:2px solid #317966;outline-offset:2px}
+@media(max-width:700px){
+ .basic-name,.destination-field{grid-column:1/-1}.basics-dates{gap:10px}
+ .date-field .field-feedback{height:36px;min-height:36px}
+ .trip-editor .date-value{font-size:14px;padding-inline:9px;gap:4px}
+ .country-options{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .timezone-heading{flex-wrap:wrap;gap:8px}.timezone-help{align-items:flex-start}.editor-start{margin-top:24px;padding:18px 16px}
+ .basics-apply{gap:10px}.apply-feedback{font-size:11px;height:36px;min-height:36px}
+}

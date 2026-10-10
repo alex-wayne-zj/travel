@@ -1,0 +1,53 @@
+.trip-editor{flex:1 0 auto;min-width:0;width:100%;overflow:visible;padding:28px clamp(16px,4vw,48px) 32px;background:#f8faf7}
+.editor-container{width:100%;max-width:1040px;margin-inline:auto}
+.editor-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:24px}
+.editor-heading h1{font-family:"Noto Serif CJK SC","Songti SC",serif;font-size:25px;font-weight:500;margin:0 0 7px}
+.editor-heading p{font-size:13px;line-height:1.7;color:#748385;margin:0}
+.editor-actions{display:flex;gap:8px;flex-shrink:0}
+.trip-editor button{border:1px solid #d6e1d6;border-radius:8px;background:#fff;padding:10px 13px;font-size:13px;min-height:44px}
+.trip-editor .editor-save{background:#173e42;color:#fff;border-color:#173e42}
+.trip-editor fieldset{border:0;padding:0;margin:0;min-width:0}
+.trip-editor .editor-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:20px;border:1px solid #dce4d7;border-radius:14px;background:#f0f4ec}
+.trip-editor label{display:flex;flex-direction:column;gap:6px;font-size:12px;line-height:1.5;color:#526c5b;min-width:0}
+.trip-editor input,.trip-editor select,.trip-editor textarea{width:100%;max-width:100%;min-width:0;min-height:44px;border:1px solid #d6e1d6;border-radius:8px;background:#fff;padding:10px;font:inherit;font-size:14px;line-height:1.4;color:#203d40}
+.trip-editor input:focus-visible,.trip-editor select:focus-visible,.trip-editor textarea:focus-visible{outline:2px solid #317966;outline-offset:2px}
+.trip-editor input[type=date],.trip-editor input[type=time]{display:block;appearance:none;-webkit-appearance:none}
+.trip-editor input::-webkit-date-and-time-value{text-align:left;min-height:1.4em}
+.trip-editor textarea{resize:vertical}
+.editor-workspace{display:grid;grid-template-columns:145px minmax(0,1fr);min-width:0;gap:24px;padding-top:26px}
+.editor-dates{display:flex;flex-direction:column;gap:5px;min-width:0;align-self:start;position:sticky;top:12px;max-height:65vh;overflow:auto;scrollbar-width:none}
+.editor-dates::-webkit-scrollbar{display:none}
+.editor-dates button{text-align:left;border-color:transparent;background:transparent;border-radius:9px}
+.editor-dates small{display:block;font-size:10px;color:#748385;margin-bottom:5px}
+.editor-dates strong{font-size:13px;font-weight:500;overflow-wrap:anywhere}
+.editor-dates button[aria-current]{background:#eaf2e5;border-color:#317966}
+.editor-day-meta,.editor-event-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.editor-add{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
+.editor-add button{font-size:12px;border-radius:20px;background:#eef3e9;border-color:transparent}
+.editor-event{border:1px solid #d6e1d6;background:#fff;border-radius:12px;margin-bottom:10px;overflow:hidden;box-shadow:0 2px 8px #173e4205}
+.trip-editor .editor-event-heading{width:100%;display:flex;align-items:center;gap:12px;border:0;border-radius:0;padding:14px 16px;text-align:left;background:transparent}
+.editor-event-heading span{font-size:11px;color:#748385;flex-shrink:0}
+.editor-event-heading strong{font-size:14px;font-weight:500;flex:1;min-width:0;overflow-wrap:anywhere}
+.editor-event-fields{padding:18px;border-top:1px solid #e5ebe2}
+.editor-wide{grid-column:1/-1}
+.trip-editor .editor-checkbox{flex-direction:row;align-items:center;flex-wrap:wrap;gap:8px}
+.trip-editor .editor-checkbox input{width:18px;height:18px;min-height:0;padding:0;accent-color:#176764;flex-shrink:0}
+.editor-backup{padding:8px 0}.editor-backup small{color:#748385;font-size:11px}
+.trip-editor .editor-pick{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;border-radius:9px;color:#176764;background:#eef4e9;border-color:#bdd3bd}
+.editor-pick small{font-size:11px;color:#617f6b}
+.trip-editor .editor-delete{color:#974833;justify-self:start}
+.editor-footer{border-top:1px solid #dce4d7;margin-top:24px;padding-top:18px}
+.trip-editor .editor-delete-trip{padding:8px 0;border:0;background:transparent;color:#974833;font-size:12px}
+.editor-error{padding:12px;background:#fff0e9;border-radius:8px;color:#943f2a;font-size:13px;line-height:1.6;margin:0 0 20px}
+.editor-error span{display:inline-block}
+.editor-empty{font-size:14px;color:#748385;line-height:1.7;padding:12px 0}
+@media(max-width:700px){
+ .trip-editor{padding:22px 16px 28px}.editor-heading{align-items:flex-start;flex-wrap:wrap;gap:14px}.editor-actions{width:100%}.editor-actions button{flex:1}
+ .trip-editor .editor-meta{padding:16px;gap:14px 10px}
+ .editor-workspace{display:block;padding-top:20px}.editor-dates{position:static;width:100%;flex-direction:row;overflow-x:auto;max-height:none;overscroll-behavior-x:contain;padding-bottom:12px;margin-bottom:10px}
+ .editor-dates button{min-width:100px;flex-shrink:0}.editor-day-meta{grid-template-columns:1fr;gap:14px}.editor-event-fields{padding:14px;gap:14px 10px}
+ .editor-pick small{max-width:45%;line-height:1.5}.editor-heading h1{font-size:25px}.trip-editor input,.trip-editor select,.trip-editor textarea{font-size:16px}
+}
+.trip-editor .editor-event-heading:focus-visible{outline:2px solid #317966;outline-offset:-3px}
+
+.trip-editor select{appearance:none;-webkit-appearance:none;padding-right:40px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2365806c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}

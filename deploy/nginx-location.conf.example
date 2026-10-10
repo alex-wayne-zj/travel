@@ -1,0 +1,4 @@
+# Generic template: copy without .example and adapt domain, certificate and paths.
+# Optional redirects from a previous path to the dedicated application host.
+location = /travel { return 302 https://travel.example.com/; }
+location ^~ /travel/ { return 302 https://travel.example.com/; }

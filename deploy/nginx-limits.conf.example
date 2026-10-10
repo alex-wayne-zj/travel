@@ -1,0 +1,7 @@
+# Generic template: copy without .example and adapt domain, certificate and paths.
+limit_req_zone $binary_remote_addr zone=travel_api:1m rate=10r/s;
+limit_req_zone $binary_remote_addr zone=travel_login:1m rate=5r/m;
+limit_conn_zone $binary_remote_addr zone=travel_connections:1m;
+limit_req_zone $binary_remote_addr zone=travel_map_jobs:1m rate=6r/m;
+limit_req_zone $binary_remote_addr zone=travel_map_assets:1m rate=60r/s;
+proxy_cache_path /var/cache/nginx/travel-map-assets levels=1:2 keys_zone=travel_map_cache:4m max_size=128m inactive=7d use_temp_path=off;
