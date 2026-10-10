@@ -2,7 +2,7 @@ import {useTimedMessage} from './useTimedMessage';
 import React,{useEffect,useRef,useState} from 'react';
 import {Map,Marker,NavigationControl,LngLatBounds,setWorkerUrl,type GeoJSONSource} from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import {Plane,TrainFront,Car,Utensils,Landmark,BedDouble,Footprints,Trees,ShoppingBag,Ticket,Play,Pause,ChevronLeft,ChevronRight,MapPin,Route,Focus,RefreshCw} from 'lucide-react';
+import {Plane,TrainFront,Car,Utensils,Landmark,BedDouble,Footprints,Trees,ShoppingBag,Ticket,Play,Pause,ChevronLeft,ChevronRight,Focus,RefreshCw} from 'lucide-react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {api,type Trip} from './api';
 import Logo from './Logo';
@@ -45,8 +45,7 @@ function MapStage({tripId,days,day,event,progress,scope,follow,onFollow,onSelect
 const slotLabels={breakfast:'早餐',morning:'上午',lunch:'中餐',afternoon:'下午',dinner:'晚餐'};
 export default function Journey({trip,onEdit}:{trip:Trip,onEdit:()=>void}) {
  const days=trip.days;
- const firstWish=(di:number)=>{const morning=days[di].events.findIndex(e=>!isAlternative(e)&&planningSlot(e)==='morning');return morning>=0?morning:Math.max(0,days[di].events.findIndex(e=>!isAlternative(e)));};
- const [cursor,setCursor]=useState<Cursor>({day:0,event:firstWish(0),progress:0});
+ const [cursor,setCursor]=useState<Cursor>({day:0,event:-1,progress:0});
  const [previewStarted,setPreviewStarted]=useState(false);
  const [playing,setPlaying]=useState(false),[scope,setScope]=useState<'day'|'trip'|'event'>('day');
  const [follow,setFollow]=useState(true),[retry,setRetry]=useState(0),[provider,setProvider]=useState<'openfreemap'|'protomaps'>('openfreemap');
@@ -58,7 +57,7 @@ export default function Journey({trip,onEdit}:{trip:Trip,onEdit:()=>void}) {
  useEffect(()=>{const card=Array.from(planner.current?.querySelectorAll<HTMLElement>('[data-event]')||[]).find(el=>el.dataset.event===event?.id);if(!card)return;const rail=card.parentElement;if(!rail?.matches('.primary-wishes,.backup-wishes'))return;const a=card.getBoundingClientRect(),b=rail.getBoundingClientRect();if(a.left<b.left||a.right>b.right)rail.scrollBy({left:a.left<b.left?a.left-b.left:a.right-b.right,behavior:reduced()?'instant':'smooth'});},[event?.id]);
  const alternatives=day.events.filter(e=>isAlternative(e));
  function chooseDay(i:number) {
-  setCursor({day:i,event:firstWish(i),progress:0});setScope('day');setFollow(true);setPlaying(false);setPreviewStarted(false);
+  setCursor({day:i,event:-1,progress:0});setScope('day');setFollow(true);setPlaying(false);setPreviewStarted(false);
  }
  function select(id:string) {
   if(drag.current?.moved)return;
@@ -100,7 +99,7 @@ export default function Journey({trip,onEdit}:{trip:Trip,onEdit:()=>void}) {
   <header><a className="brand" href="#journey" aria-label="旅途首页"><Logo size={28}/><span>旅途</span></a><div className="trip-title"><h1>{trip.name}</h1><span>{trip.startDate} — {trip.endDate}</span></div><button className="preview" onClick={togglePreview} aria-label={playing?'暂停路线预览':'预览路线'}>{playing?<Pause size={16}/>:<Play size={16}/>}<span>{playing?'暂停':'预览路线'}</span></button></header>
   <section className="map-stage" aria-label="旅程地图">
    <MapStage tripId={trip.id} onProvider={setProvider} days={days} day={day} event={event} progress={cursor.progress} scope={scope} follow={follow} onFollow={setFollow} onSelect={select} retry={retry}/>
-   <div className="map-toolbar"><div className="segmented"><button aria-pressed={scope==='trip'} onClick={()=>{setScope('trip');setFollow(true);}}>全程</button><button aria-pressed={scope!=='trip'} onClick={()=>{setScope('day');setFollow(true);}}>当天</button></div><button className="follow" aria-label={follow?'跟随行程':'回到行程'} title={follow?'跟随行程':'回到行程'} onClick={()=>{setFollow(true);setScope('event');}}><Focus size={17}/></button><button className="retry" onClick={()=>setRetry(r=>r+1)} aria-label="重新加载地图" title="重新加载地图"><RefreshCw size={16}/></button></div>
+   <div className="map-toolbar"><div className="segmented"><button aria-pressed={scope==='trip'} onClick={()=>{chooseDay(dayIndex);setScope('trip');}}>全程</button><button aria-pressed={scope!=='trip'} onClick={()=>chooseDay(dayIndex)}>当天</button></div><button className="follow" aria-label={follow?'跟随行程':'回到行程'} title={follow?'跟随行程':'回到行程'} onClick={()=>{setFollow(true);setScope(event?'event':'day');}}><Focus size={17}/></button><button className="retry" onClick={()=>setRetry(r=>r+1)} aria-label="重新加载地图" title="重新加载地图"><RefreshCw size={16}/></button></div>
    <div className="map-caption"><strong>{day.city}</strong><small>{day.title}</small></div><div className="map-note">路线示意</div><details className="map-info"><summary aria-label="地图数据来源">i</summary><span>数据来自 <a href={provider==='protomaps'?'https://protomaps.com/':'https://openfreemap.org/'} target="_blank" rel="noreferrer">{provider==='protomaps'?'Protomaps':'OpenFreeMap'}</a></span></details><div className="map-credit">© <a href={provider==='protomaps'?'https://protomaps.com/':'https://openmaptiles.org/'} target="_blank" rel="noreferrer">{provider==='protomaps'?'Protomaps':'OpenMapTiles'}</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a></div>
   </section>
   <section className="planner" aria-label="当天行程" ref={planner}>
@@ -112,17 +111,17 @@ export default function Journey({trip,onEdit}:{trip:Trip,onEdit:()=>void}) {
      {days.map((d,i)=><button key={d.id} aria-current={i===dayIndex?'date':undefined} onClick={()=>{if(!drag.current?.moved)chooseDay(i);}}><span>DAY {String(i+1).padStart(2,'0')}<small>{d.date.slice(5).replace('-','/')}</small></span><strong>{d.city}</strong></button>)}
     </nav><button className="date-arrow" aria-label="后一天" disabled={dayIndex===days.length-1} onClick={()=>chooseDay(dayIndex+1)}><ChevronRight size={18}/></button>
    </div>
-   <div className="travel-stay">
+   <div className="planner-row"><span className="row-title" aria-label="住宿与交通"><span>住宿</span><span aria-hidden="true">&amp;</span><span>交通</span></span><div className="travel-stay">
     {transport.map(e=><button className={`ticket ${e.id===event?.id?'active':''}`} key={e.id} data-event={e.id} aria-pressed={e.id===event?.id} onClick={()=>select(e.id)}><Icon kind={e.kind} size={20}/><span className="ticket-route"><small>{labels[e.kind]}</small><strong>{e.title}</strong></span><span className="ticket-schedule"><strong>{e.time||'待定'}</strong><small>始发{e.endTime&&` · ${e.endTime} 抵达`}</small></span></button>)}
     {hotel&&<button className={`stay ${hotel.id===event?.id?'active':''}`} data-event={hotel.id} aria-pressed={hotel.id===event?.id} onClick={()=>select(hotel.id)}><BedDouble size={17}/><span><small>{hotel.stayLabel||'住宿待选'}</small><strong>{hotel.title}</strong></span></button>}
-   </div>
-   <div className="primary-wishes" role="region" aria-label="想去与想吃" tabIndex={0}>{Object.entries(slotLabels).flatMap(([slot,label])=>{
+   </div></div>
+   <div className="planner-row"><span className="row-title">行程</span><div className="primary-wishes" role="region" aria-label="想去与想吃" tabIndex={0}>{Object.entries(slotLabels).flatMap(([slot,label])=>{
     const matches=primary.filter(e=>planningSlot(e)===slot);
     return matches.length?matches.map(e=>wishButton(e,label)):slot==='breakfast'?[]:[<button className="wish-card empty-slot" key={slot} onClick={onEdit}><span className="wish-label">{label}</span><strong>＋ 添加{slot==='lunch'||slot==='dinner'?'想吃':'想去'}</strong></button>];
-   })}</div>
-   <div className="alternatives"><span className="alternatives-label">备选<small>换个选择</small></span><div className="backup-wishes" role="region" aria-label="备选活动" tabIndex={0}>{alternatives.map(e=>wishButton(e,slotLabels[planningSlot(e) as keyof typeof slotLabels]))}{alternatives.length===0&&<button className="wish-card backup-card" onClick={onEdit}>＋ 添加备选</button>}</div></div>
+   })}</div></div>
+   <div className="planner-row alternatives"><span className="row-title">备选</span><div className="backup-wishes" role="region" aria-label="备选活动" tabIndex={0}>{alternatives.map(e=>wishButton(e,slotLabels[planningSlot(e) as keyof typeof slotLabels]))}{alternatives.length===0&&<button className="wish-card backup-card" onClick={onEdit}>＋ 添加备选</button>}</div></div>
 
-   {event?<aside className="recommendation" aria-label="推荐词" aria-live="polite"><div className="recommendation-title"><Icon kind={event.kind} size={15}/><strong>{event.title}</strong>{(event&&isAlternative(event))&&<span>备选</span>}{event.sourceUrl&&<a href={event.sourceUrl} target="_blank" rel="noreferrer">参考</a>}</div><p>{event.recommendation||event.note}</p></aside>:<aside className="recommendation"><p>留一点空白，给沿途的惊喜。点击添加，为这一天写下想去和想吃。</p></aside>}
+   <aside className="recommendation" aria-label="推荐词" aria-live="polite"><p>{event?(event.recommendation||event.note):'选择一项活动，查看推荐与参考链接。'}</p>{event?.sourceUrl&&<a href={event.sourceUrl} target="_blank" rel="noreferrer">参考链接</a>}</aside>
   </section>
  </main>;
 }

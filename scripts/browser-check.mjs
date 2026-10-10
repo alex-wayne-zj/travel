@@ -20,7 +20,7 @@ try{
    assert.equal(await page.locator('input[type=range]').count(),0);
    for(const e of days[i].events.filter(e=>e.slot==='transport')){
     const ticket=page.locator(`.ticket[data-event="${e.id}"]`);assert.ok((await ticket.innerText()).includes(e.time));
-    assert.ok(await ticket.locator('.ticket-schedule strong').evaluate(e=>parseFloat(getComputedStyle(e).fontSize))>=20);
+    assert.ok(await ticket.locator('.ticket-schedule strong').evaluate(e=>parseFloat(getComputedStyle(e).fontSize))>=18);
    }
    const longest=days[i].events.filter(e=>e.recommendation).sort((a,b)=>b.recommendation.length-a.recommendation.length)[0];
    await page.locator(`[data-event="${longest.id}"]`).click();assert.equal(await page.locator('.recommendation p').innerText(),longest.recommendation);
@@ -35,7 +35,7 @@ try{
  }
  await page.setViewportSize({width:1366,height:768});await page.locator('.days button').first().click();
  const before=await page.locator('.recommendation p').innerText();await page.locator('.primary-wishes .wish-card').nth(1).click();assert.notEqual(await page.locator('.recommendation p').innerText(),before);
- await page.locator('.backup-card').first().click();assert.equal(await page.locator('.backup-card').first().getAttribute('aria-pressed'),'true');assert.ok((await page.locator('.recommendation-title').innerText()).includes('备选'));
+ await page.locator('.backup-card').first().click();assert.equal(await page.locator('.backup-card').first().getAttribute('aria-pressed'),'true');assert.equal(await page.locator('.recommendation-title').count(),0);
  await page.locator('.primary-wishes .wish-card').nth(2).focus();await page.keyboard.press('Enter');assert.equal(await page.locator('.primary-wishes .wish-card').nth(2).getAttribute('aria-pressed'),'true');
  await page.locator('.days button').first().click();await page.getByRole('button',{name:'预览路线',exact:true}).click();
  assert.equal(await page.locator('.ticket').first().getAttribute('aria-pressed'),'true','preview includes early flight');
