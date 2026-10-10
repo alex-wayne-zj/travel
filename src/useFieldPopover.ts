@@ -1,8 +1,11 @@
 import {useEffect,useLayoutEffect,useRef,useState,type KeyboardEvent} from 'react';
 
+import {useMotionPresence} from './AnimatedPanel';
+
 // Shared only by field popovers: position in viewport, close on outside focus, keep Tab natural.
 export function useFieldPopover(onLeave?:()=>void){
  const [open,setOpen]=useState(false),[position,setPosition]=useState<{left:number;top:number;maxHeight?:number;maxWidth?:number}>({left:16,top:16});
+ const motion=useMotionPresence(open);
  const field=useRef<HTMLDivElement>(null),panel=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null);
  const leave=useRef(onLeave);leave.current=onLeave;
  function close(restore=false,notify=true){setOpen(false);if(notify)leave.current?.();if(restore)trigger.current?.focus();}
@@ -31,8 +34,8 @@ export function useFieldPopover(onLeave?:()=>void){
  },[open]);
  function panelTab(event:KeyboardEvent){
   if(event.key!=='Tab')return;
-  const items=Array.from(panel.current?.querySelectorAll<HTMLElement>('button,input,select')||[]).filter(el=>el.tabIndex>=0&&!el.hasAttribute('disabled'));
+  const items=Array.from(panel.current?.querySelectorAll<HTMLElement>('button,input,select')||[]).filter(el=>el.tabIndex>=0&&!el.hasAttribute('disabled')&&!el.closest('[inert],[hidden]'));
   if(event.target===(event.shiftKey?items[0]:items.at(-1)))close(true);
  }
- return {open,setOpen,position,field,panel,trigger,close,panelTab};
+ return {open,present:motion.present,expanded:motion.expanded,setOpen,position,field,panel,trigger,close,panelTab};
 }

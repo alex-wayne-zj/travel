@@ -1,0 +1,19 @@
+.motion-panel{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows 240ms cubic-bezier(.4,0,.6,1),opacity 180ms}
+.motion-panel.expanded{grid-template-rows:1fr;opacity:1}
+.motion-panel-clip{min-height:0;overflow:hidden}
+.motion-popover{opacity:0;transform:translateY(-4px);transition:opacity 180ms,transform 240ms;animation:none}
+.motion-popover.expanded{opacity:1;transform:translateY(0)}
+.motion-enter{animation:motion-enter 240ms ease-out}
+@keyframes motion-enter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.motion-panel,.motion-popover{transition:none}.motion-enter{animation:none}}
+
+.motion-panel[hidden]{display:none}
+.trip-editor .timezone-reveal{grid-column:1/-1;min-width:0}
+.invite-row>.motion-panel{grid-column:1/-1}
+.motion-overlay{opacity:0;transition:opacity 180ms}
+.motion-overlay.expanded{opacity:1}
+.motion-overlay .confirmation-card{transform:translateY(8px);transition:transform 240ms}
+.motion-overlay.expanded .confirmation-card{transform:none}
+@media(prefers-reduced-motion:reduce){.motion-overlay,.motion-overlay .confirmation-card{transition:none}}
+
+.motion-overlay[aria-hidden=true],.motion-popover[aria-hidden=true]{pointer-events:none}

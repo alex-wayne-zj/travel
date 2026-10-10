@@ -1,3 +1,5 @@
+import {useRef} from 'react';
+import AnimatedPanel from './AnimatedPanel';
 import {isAlternative,planningSlot,type Event,type Kind} from './model';
 import {allowed,editorKind,kinds,slots} from './editor-options';
 import LocationEditor from './LocationEditor';
@@ -17,6 +19,8 @@ interface Props {
 
 export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onPick,handle,dragging}:Props){
  const confirm=useConfirmation();
+ const lastTo=useRef(e.to);if(e.to)lastTo.current=e.to;
+ const to=e.to||lastTo.current;
  const slot=planningSlot(e);
  async function remove(){
   if(await confirm({
@@ -70,14 +74,14 @@ export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onP
      <input type="checkbox" checked={!!e.to} onChange={x=>onChange({to:x.target.checked?{name:'',lat:NaN,lng:NaN}:undefined})}/>
      添加交通终点
     </label>
-    {e.to&&<>
+    <AnimatedPanel open={!!e.to} className="editor-wide" contentClassName="editor-kind-fields">{to&&<>
      <label className="editor-wide">终点名称
-      <input maxLength={300} value={e.to.name} onChange={x=>onChange({to:{...e.to!,name:x.target.value}})}/>
+      <input maxLength={300} value={to.name} onChange={x=>onChange({to:{...e.to!,name:x.target.value}})}/>
      </label>
-     <LocationEditor lat={e.to.lat} lng={e.to.lng} label="交通终点" onChange={(lat,lng)=>onChange({to:{...e.to!,lat,lng}})} onPick={onPick}/>
-    </>}
+     <LocationEditor lat={to.lat} lng={to.lng} label="交通终点" onChange={(lat,lng)=>onChange({to:{...e.to!,lat,lng}})} onPick={onPick}/>
+    </>}</AnimatedPanel>
    </>}
-   {e.kind==='hotel'&&<>
+   <AnimatedPanel open={e.kind==='hotel'} className="editor-wide" contentClassName="editor-kind-fields">
     <label>住宿状态
      <input maxLength={500} value={e.stayLabel||''} onChange={x=>onChange({stayLabel:x.target.value})} placeholder="待预订"/>
     </label>
@@ -96,7 +100,7 @@ export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onP
     <label>晚数
      <input type="number" min="1" max="60" value={e.nights??''} onChange={x=>onChange({nights:x.target.value?Number(x.target.value):undefined})}/>
     </label>
-   </>}
+   </AnimatedPanel>
    <button className="editor-delete editor-wide" onClick={()=>void remove()}>删除活动</button>
   </div></AnimatedEventBody>
  </article>;

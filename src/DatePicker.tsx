@@ -1,6 +1,7 @@
 import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent} from 'react';
 import {createPortal} from 'react-dom';
 import {CalendarDays,ChevronLeft,ChevronRight,X} from 'lucide-react';
+import AnimatedPanel from './AnimatedPanel';
 import {useFieldPopover} from './useFieldPopover';
 import './date-picker.css';
 
@@ -23,7 +24,7 @@ function shiftMonth(date:Date,step:number){
 }
 
 export default function DatePicker({label,value,onChange,onValidate,error,rangeStart,rangeEnd,disabled=false}:{label:string;value:string;onChange:(date:string)=>void;onValidate:()=>void;error?:string;rangeStart:string;rangeEnd:string;disabled?:boolean}){
- const id=useId(),{open,setOpen,field,panel,trigger,position,close,panelTab}=useFieldPopover(onValidate);
+ const id=useId(),{open,present,expanded,setOpen,field,panel,trigger,position,close,panelTab}=useFieldPopover(onValidate);
  const [month,setMonth]=useState(()=>first(today())),[focused,setFocused]=useState(''),[manual,setManual]=useState(false);
  const manualInput=useRef<HTMLInputElement>(null);
  const shouldFocus=useRef(false);
@@ -48,20 +49,20 @@ export default function DatePicker({label,value,onChange,onValidate,error,rangeS
   if(open&&shouldFocus.current){shouldFocus.current=false;panel.current?.querySelector<HTMLButtonElement>(`[data-date="${focused}"]`)?.focus({preventScroll:true});}
  },[open,focused,month]);
  useEffect(()=>{if(disabled)setOpen(false);},[disabled]);
- useLayoutEffect(()=>{if(open&&manual)manualInput.current?.focus();},[open,manual]);
+ useLayoutEffect(()=>{if(open&&manual)manualInput.current?.focus({preventScroll:true});},[open,manual]);
  const tabDate=cells.some(d=>iso(d)===focused)?focused:iso(month);
  return <div className="date-field" ref={field}>
   <span className="field-label" id={id}>{label}</span>
   <button className="date-value" ref={trigger} type="button" aria-labelledby={id} aria-describedby={id+'-value '+id+'-error'} aria-invalid={!!error} aria-haspopup="dialog" aria-expanded={open} aria-controls={id+'-calendar'} disabled={disabled} onClick={()=>open?close():show()} onBlur={e=>{if(!field.current?.contains(e.relatedTarget)&&!panel.current?.contains(e.relatedTarget))onValidate();}}><span id={id+'-value'} className={!value?'field-placeholder':''}>{value?value.replaceAll('-','/'):'请选择日期'}</span><CalendarDays size={17}/></button>
   <p className="field-feedback" id={id+'-error'} aria-live="polite">{error||' '}</p>
-  {open&&createPortal(<div className="date-calendar" ref={panel} id={id+'-calendar'} role="dialog" aria-label={`${label}日历`} style={position} onKeyDown={panelTab}>
+  {present&&createPortal(<div className={`date-calendar motion-popover${expanded?' expanded':''}`} aria-hidden={!open} inert={!open} ref={panel} id={id+'-calendar'} role="dialog" aria-label={`${label}日历`} style={position} onKeyDown={panelTab}>
    <div className="date-calendar-heading"><span>{label}</span><button type="button" aria-label="关闭日历" onClick={()=>close(true)}><X size={16}/></button></div>
    <div className="date-calendar-month"><button type="button" aria-label="上个月" disabled={month.getUTCFullYear()===0&&month.getUTCMonth()===0} onClick={()=>navigate(-1)}><ChevronLeft size={17}/></button><strong aria-live="polite">{monthTitle}</strong><button type="button" aria-label="下个月" disabled={month.getUTCFullYear()===9999&&month.getUTCMonth()===11} onClick={()=>navigate(1)}><ChevronRight size={17}/></button></div>
    <div className="date-calendar-grid" role="grid" aria-label={monthTitle}>
     <div role="row" className="date-calendar-week">{['一','二','三','四','五','六','日'].map(d=><span key={d} role="columnheader">{d}</span>)}</div>
     {Array.from({length:6},(_,week)=><div role="row" key={week} className="date-calendar-row">{cells.slice(week*7,week*7+7).map((d,index)=>{if(d.getUTCFullYear()<0||d.getUTCFullYear()>9999)return <span key={'empty-'+index} aria-hidden="true"/>;const date=iso(d),selected=date===value,inRange=!!parse(rangeStart)&&!!parse(rangeEnd)&&date>=rangeStart&&date<=rangeEnd;return <button type="button" role="gridcell" key={date} data-date={date} aria-label={date} aria-selected={selected} aria-current={date===currentToday?'date':undefined} tabIndex={date===tabDate?0:-1} className={[d.getUTCMonth()!==month.getUTCMonth()?'other-month':'',inRange?'in-range':'',selected?'selected':''].join(' ')} onFocus={()=>setFocused(date)} onKeyDown={e=>keydown(e,d)} onClick={()=>choose(date)}>{d.getUTCDate()}</button>;})}</div>)}
    </div>
-   {manual&&<label className="date-manual">手动输入{label}<input ref={manualInput} value={value} maxLength={10} placeholder="YYYY-MM-DD" aria-invalid={!!error} onChange={e=>onChange(e.target.value)} onBlur={onValidate}/></label>}
+   <AnimatedPanel open={manual}><label className="date-manual">手动输入{label}<input ref={manualInput} value={value} placeholder="YYYY-MM-DD" aria-invalid={!!error} onChange={e=>onChange(e.target.value)} onBlur={onValidate}/></label></AnimatedPanel>
    <div className="date-calendar-footer"><button type="button" aria-expanded={manual} onClick={()=>setManual(!manual)}>手动输入</button><button type="button" onClick={()=>choose(currentToday)}>今天</button></div>
   </div>,document.body)}
  </div>;

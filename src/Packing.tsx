@@ -1,5 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {api,tripInput,type Trip,type Template,type PackingItem} from './api';
+import AnimatedPanel from './AnimatedPanel';
 import './packing.css';
 
 export default function PackingPage({trip,template,onSaved,onTemplate,onDirty}:{trip:Trip;template:Template;onSaved:(t:Trip)=>void;onTemplate:(t:Template)=>void;onDirty:(dirty:boolean)=>void}){
@@ -47,8 +48,8 @@ export default function PackingPage({trip,template,onSaved,onTemplate,onDirty}:{
     <div><h1>行李与提醒</h1><p>{trip.name} · {checked} / {items.length} 件已装好</p></div>
     <button className="solid" disabled={busy||draft.extraItems.some(i=>!i.label.trim())} onClick={save}>{busy?'保存中…':'保存清单'}</button>
    </div>
-   {error&&<p ref={errorRef} tabIndex={-1} className="error packing-feedback" role="alert">{error}</p>}
-   {message&&<p className="packing-feedback" role="status">{message}</p>}
+   <AnimatedPanel open={!!error}><p ref={errorRef} tabIndex={-1} className="error packing-feedback" role="alert">{error}</p></AnimatedPanel>
+   <AnimatedPanel open={!!message}><p className="packing-feedback" role="status">{message}</p></AnimatedPanel>
    <fieldset className="packing-fields" disabled={busy}>
     <div className="packing-overview">
      {categories.map(category=><section className="packing-card" key={category}>
@@ -77,7 +78,7 @@ export default function PackingPage({trip,template,onSaved,onTemplate,onDirty}:{
       <button type="button" aria-expanded={editingTemplate} aria-controls="packing-template-body" onClick={()=>setEditingTemplate(!editingTemplate)}>管理共用模板</button>
      </div>
     </div>
-    {editingItems&&<section className="packing-adjust" id="packing-adjust-body" aria-label="特殊物品">
+    <AnimatedPanel open={editingItems} id="packing-adjust-body"><section className="packing-adjust" aria-label="特殊物品">
      <h2>特殊物品</h2>
       <div className="packing-adjust-body">
        {draft.extraItems.map((item,n)=><div className="extra-row" key={item.id}>
@@ -86,8 +87,8 @@ export default function PackingPage({trip,template,onSaved,onTemplate,onDirty}:{
        </div>)}
        <button className="quiet" disabled={draft.extraItems.length>=100} onClick={extra}>＋ 添加物品</button>
       </div>
-    </section>}
-    {editingTemplate&&<section className="template-editor packing-template-body" id="packing-template-body" aria-label="共用模板">
+    </section></AnimatedPanel>
+    <AnimatedPanel open={editingTemplate} id="packing-template-body"><section className="template-editor packing-template-body" aria-label="共用模板">
      <h2>共用模板</h2>
       <p className="muted">已有旅行保留创建时的清单与提醒。模板不会覆盖其他旅程。</p>
       {shared.items.map((item,n)=><div className="template-row" key={item.id}>
@@ -95,10 +96,10 @@ export default function PackingPage({trip,template,onSaved,onTemplate,onDirty}:{
        <input aria-label="模板物品" maxLength={200} value={item.label} onChange={e=>setShared({...shared,items:shared.items.map((x,k)=>k===n?{...x,label:e.target.value}:x)})}/>
        <button aria-label="删除模板物品" onClick={()=>setShared({...shared,items:shared.items.filter(x=>x.id!==item.id)})}>×</button>
       </div>)}
-      <button className="quiet" disabled={shared.items.length>=100} onClick={()=>setShared({...shared,items:[...shared.items,{id:crypto.randomUUID(),label:'',category:'日常必备'} as PackingItem]})}>＋ 添加模板物品</button>
+      <button className="quiet" disabled={shared.items.length>=100} onClick={()=>setShared({...shared,items:[...shared.items,{id:crypto.randomUUID(),label:'',category:'日用'} as PackingItem]})}>＋ 添加模板物品</button>
       <textarea aria-label="共用提醒" maxLength={10000} rows={5} value={shared.notes} onChange={e=>setShared({...shared,notes:e.target.value})}/>
       <button className="solid" disabled={busy||shared.items.some(i=>!i.label.trim()||!i.category.trim())} onClick={saveTemplate}>保存共用模板</button>
-    </section>}
+    </section></AnimatedPanel>
    </fieldset>
   </div>
  </section>;

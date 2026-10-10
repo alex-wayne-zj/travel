@@ -1,5 +1,5 @@
 .date-field{min-width:0;display:flex;flex-direction:column;gap:6px}
-.date-calendar{position:fixed;z-index:80;width:min(336px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:14px 16px 10px;border:1px solid #d6e1d6;border-radius:14px;background:#fff;color:#203d40;box-shadow:0 12px 36px #173e421a,0 2px 8px #173e4208;animation:date-calendar-in .14s ease-out;font-size:13px}
+.date-calendar{position:fixed;z-index:80;width:min(336px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:14px 16px 10px;border:1px solid #d6e1d6;border-radius:14px;background:#fff;color:#203d40;box-shadow:0 12px 36px #173e421a,0 2px 8px #173e4208;font-size:13px}
 .date-calendar button{font:inherit;color:inherit;cursor:pointer;display:grid;place-items:center;padding:0;min-height:40px;border:0;border-radius:8px;background:transparent}
 .date-calendar button:hover{background:#eef3e9}
 .date-calendar button:disabled{opacity:.35;cursor:default;background:transparent}
@@ -21,5 +21,4 @@
 .date-calendar-row .selected:focus-visible{outline-color:#9bbb9f;outline-offset:2px}
 .date-calendar-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e6ece3;margin-top:10px;padding-top:5px;color:#849188;font-size:11px}
 .date-calendar-footer button{color:#176764;font-size:12px;padding:0 12px;min-height:36px}
-@keyframes date-calendar-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.date-calendar{animation:none}}

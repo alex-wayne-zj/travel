@@ -2,6 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import type {Trip,TripInput} from './api';
 import {isAlternative,type Day,type Event} from './model';
 import {useConfirmation} from './ConfirmDialog';
+import AnimatedPanel from './AnimatedPanel';
 import EditorActivities from './EditorActivities';
 import TripBasics,{basicsErrors,type BasicsValues} from './TripBasics';
 import {readDestination,destinationText} from './destinations';
@@ -12,7 +13,8 @@ import './editor.css';
 const uid=()=>crypto.randomUUID();
 type EditorProps={trip:Trip|null;onSave:(input:TripInput)=>Promise<void>;onCancel:()=>void;onPick?:(lat:number,lng:number,onConfirm:(lat:number,lng:number)=>void)=>void;onDirty?:(dirty:boolean)=>void;onDelete?:()=>void};
 export default function Editor({trip,onSave,onCancel,onPick,onDirty,onDelete}:EditorProps){
- const confirm=useConfirmation(),errorRef=useRef<HTMLDivElement>(null);
+ const confirm=useConfirmation(),errorRef=useRef<HTMLDivElement>(null),errorFocusTimer=useRef(0);
+ useEffect(()=>()=>clearTimeout(errorFocusTimer.current),[]);
  const [basics,setBasics]=useState<BasicsValues>(()=>({name:trip?.name||'',destinations:readDestination(trip?.destination||''),start:trip?.startDate||'',end:trip?.endDate||'',timezone:trip?.timezone||''}));
  const [days,setDays]=useState<Day[]>(()=>structuredClone(trip?.days||[]));
  const [selected,setSelected]=useState(0),[open,setOpen]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[submitted,setSubmitted]=useState(false),[applyMessage,setApplyMessage]=useState('');
@@ -21,7 +23,8 @@ export default function Editor({trip,onSave,onCancel,onPick,onDirty,onDelete}:Ed
  const dirty=JSON.stringify({name,destination,start,end,timezone,days})!==initial;
  useEffect(()=>{onDirty?.(dirty);return()=>onDirty?.(false);},[dirty,onDirty]);
  const day=days[selected];
- function reportError(message:string){setError(message);requestAnimationFrame(()=>{errorRef.current?.scrollIntoView({block:'nearest'});errorRef.current?.focus({preventScroll:true});});}
+ // Focus after expansion so a clipped alert cannot scroll below the viewport.
+ function reportError(message:string){setError(message);clearTimeout(errorFocusTimer.current);errorFocusTimer.current=window.setTimeout(()=>{const target=errorRef.current;if(!target||target.closest('[inert],[hidden]'))return;target.scrollIntoView({block:'nearest'});target.focus({preventScroll:true});},matchMedia('(prefers-reduced-motion: reduce)').matches?0:260);}
  function changeBasics(patch:Partial<BasicsValues>){setBasics(b=>({...b,...patch}));if('start'in patch||'end'in patch)setApplyMessage('');}
  async function applyDates(){
   setApplyMessage('');
@@ -58,7 +61,7 @@ export default function Editor({trip,onSave,onCancel,onPick,onDirty,onDelete}:Ed
  return <section className="trip-editor" aria-label="编辑旅程"><div className="editor-container">
   <div className="editor-heading"><div><h1>{trip?'编辑旅程':'新建旅程'}</h1><p>先定目的地与日期，再安排每天想去与想吃的地方。</p></div><div className="editor-actions"><button disabled={busy} onClick={()=>{if(!busy)onCancel();}}>取消</button><button className="editor-save" disabled={busy} onClick={save}>{busy?'保存中…':'保存旅程'}</button></div></div>
   <TripBasics value={basics} onChange={changeBasics} onApply={applyDates} busy={busy} submitted={submitted} applyMessage={applyMessage} existing={!!trip}/>
-  {!day?<div className="editor-start"><h2>开始安排每天的行程</h2><p>选好起止日期，点击“应用”生成每天的安排。</p></div>:<div className="editor-workspace">
+  {!day?<div className="editor-start"><h2>开始安排每天的行程</h2><p>选好起止日期，点击“应用”生成每天的安排。</p></div>:<div className="editor-workspace motion-enter">
    <nav className="editor-dates" aria-label="选择编辑日期">{days.map((d,i)=><button disabled={busy} key={d.id} aria-current={selected===i?'date':undefined} onClick={()=>{setSelected(i);setOpen(null);}}><small>DAY {i+1} · {d.date.slice(5)}</small><strong>{d.city||'待安排'}</strong></button>)}</nav>
    <fieldset disabled={busy} className="editor-day">
     <div className="editor-day-meta"><label>当天城市<input maxLength={200} value={day.city} onChange={e=>changeDay({city:e.target.value})}/></label><label>当天主题<input maxLength={300} value={day.title} onChange={e=>changeDay({title:e.target.value})} placeholder="例如 老城与河畔漫步"/></label></div>
@@ -68,7 +71,7 @@ export default function Editor({trip,onSave,onCancel,onPick,onDirty,onDelete}:Ed
 
    </fieldset>
   </div>}
-  {error&&<div className="editor-status" ref={errorRef} tabIndex={-1} role="alert"><p className="editor-error">{error} <span>输入仍保留在此页。</span></p></div>}
+  <AnimatedPanel open={!!error}><div className="editor-status" ref={errorRef} tabIndex={-1} role="alert"><p className="editor-error">{error} <span>输入仍保留在此页。</span></p></div></AnimatedPanel>
   {onDelete&&<div className="editor-footer"><button disabled={busy} className="editor-delete-trip" onClick={onDelete}>删除这趟旅途</button></div>}
  </div></section>;
 }

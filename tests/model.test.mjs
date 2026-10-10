@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {advance,isLastStop,point,route} from '../src/model.ts';
+import {advance,isLastStop,point,route,activityStops,dayConnections} from '../src/model.ts';
 const days=JSON.parse(readFileSync(new URL('../src/itinerary.json',import.meta.url)));
 test('all ten days contain four primary slots and exactly two alternative sights and a restaurant',()=>{
  assert.equal(days.length,10);const ids=new Set();
@@ -50,4 +50,13 @@ test('backup status is independent of breakfast and preserves legacy choices',as
  assert.equal(planningSlot({...legacy,kind:'sight'}),'morning');
  const schedule=[{...days[0],events:[event,legacy,{...event,id:'last'}]}];
  assert.equal(advance(schedule,{day:0,event:0,progress:0},1).cursor.event,2);
+});
+
+test('day connection paths preserve editable primary activity order and never join days',()=>{
+ const make=(id,kind,slot,alternative=false)=>({id,kind,slot,alternative,title:id,lat:Number(id),lng:Number(id)+10,note:''});
+ const first={id:'one',date:'2026-10-12',city:'',title:'',events:[make('1','food','breakfast'),make('2','hotel','stay'),make('3','nature','afternoon'),make('4','food','lunch',true),make('5','train','transport'),make('6','food','dinner')]};
+ const second={...first,id:'two',events:[make('7','visit','morning'),make('8','food','lunch')]};
+ assert.deepEqual(activityStops(first).map(e=>e.id),['1','3','6']);
+ assert.deepEqual(dayConnections([first,second]),[[[11,1],[13,3],[16,6]],[[17,7],[18,8]]]);
+ assert.deepEqual(dayConnections([{...first,events:[]},{...first,events:[make('1','food','breakfast')]},{...first,events:[make('4','food','alternative')]}]),[]);
 });

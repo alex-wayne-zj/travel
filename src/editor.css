@@ -63,10 +63,7 @@
 .editor-sort-note{height:20px;margin:0 0 6px;font-size:11px;line-height:20px;color:#748385}
 .editor-sort-note[aria-hidden=true]{visibility:hidden}
 .editor-order-status{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.editor-event-reveal{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows 240ms cubic-bezier(.4,0,.6,1),opacity 180ms}
-.editor-event-reveal.expanded{grid-template-rows:1fr;opacity:1}
-.editor-event-clip{min-height:0;overflow:hidden}
-@media(prefers-reduced-motion:reduce){.editor-event-reveal,.trip-editor .editor-sort-handle{transition:none}}
+@media(prefers-reduced-motion:reduce){.trip-editor .editor-sort-handle{transition:none}}
 
 .editor-events:has(.sorting){user-select:none}
 .trip-editor.editor-drag-layer{position:fixed;z-index:1000;width:auto;padding:0;background:none;pointer-events:none;will-change:transform;overflow:visible}
@@ -76,3 +73,5 @@
 @media(prefers-reduced-motion:reduce){.editor-drag-card{transform:none;transition:none}}
 
 .editor-location{min-width:0}.editor-map-link{display:inline-block;margin-top:5px;padding:8px 0;color:#176764;font-size:12px;text-underline-offset:3px}
+
+.editor-kind-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 10px;min-width:0}

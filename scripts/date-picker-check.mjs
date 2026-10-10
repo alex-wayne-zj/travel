@@ -6,7 +6,7 @@ const url=process.env.TRAVEL_TEST_URL||'http://127.0.0.1:5190/';
 const browser=await chromium.launch({executablePath:'/root/.cache/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-linux64/chrome-headless-shell',args:['--no-sandbox']});
 mkdirSync('.artifacts',{recursive:true});const results=[];
 try{for(const width of [1366,768,390,375]){
- const height=width===375?667:width===390?844:768;const page=await browser.newPage({viewport:{width,height}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const height=width===375?667:width===390?844:768;const page=await browser.newPage({viewport:{width,height},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/api/**',route=>{
   assert.equal(route.request().method(),'GET','UI verification must not write to the API');const path=new URL(route.request().url()).pathname;
   const body=path==='/api/session'?{authenticated:true,username:'test',accountId:'test',role:'friend',csrfToken:'test'}:path==='/api/trips'?{trips:[]}:path==='/api/packing-template'?{items:[],notes:'',version:1}:null;

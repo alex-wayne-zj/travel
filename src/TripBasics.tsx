@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import AnimatedPanel from './AnimatedPanel';
 import DatePicker from './DatePicker';
 import DestinationPicker from './DestinationPicker';
 import TimezonePicker,{validTimezone} from './TimezonePicker';
@@ -36,7 +37,7 @@ export default function TripBasics({value,onChange,onApply,busy,submitted,applyM
   <div className="basic-name"><label>旅程名称<input maxLength={160} value={value.name} onChange={e=>onChange({name:e.target.value})} onBlur={()=>touch('name')} aria-invalid={!!feedback('name')} aria-describedby="name-feedback" placeholder="例如 德国十日"/></label><p className="field-feedback" id="name-feedback" aria-live="polite">{feedback('name')||' '}</p></div>
   <DestinationPicker value={value.destinations} onChange={destinations} onBlur={()=>touch('destinations')} error={feedback('destinations')}/>
   <div className="basics-dates"><DatePicker label="开始日期" value={value.start} onChange={start=>{onChange({start});if(value.end)touch('end');}} onValidate={()=>touch('start')} error={feedback('start')} rangeStart={value.start} rangeEnd={value.end} disabled={busy}/><DatePicker label="结束日期" value={value.end} onChange={end=>onChange({end})} onValidate={()=>touch('end')} error={feedback('end')} rangeStart={value.start} rangeEnd={value.end} disabled={busy}/></div>
-  {showTimezone&&<TimezonePicker value={value.timezone} onChange={timezone=>{onChange({timezone});touch('timezone');}} date={value.start} countryIds={value.destinations.ids} other={value.destinations.other} error={feedback('timezone')} onBlur={()=>touch('timezone')}/>}
+  <AnimatedPanel open={showTimezone} className="timezone-reveal"><TimezonePicker value={value.timezone} onChange={timezone=>{onChange({timezone});touch('timezone');}} date={value.start} countryIds={value.destinations.ids} other={value.destinations.other} error={feedback('timezone')} onBlur={()=>touch('timezone')}/></AnimatedPanel>
   <div className="basics-apply"><p className="apply-feedback" aria-live="polite">{applyMessage||' '}</p><button type="button" onClick={()=>{touch('start');touch('end');onApply();}}>应用</button></div>
  </fieldset>;
 }

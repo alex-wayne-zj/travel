@@ -8,6 +8,13 @@ export function planningSlot(e:Event):Exclude<Event['slot'],'alternative'|undefi
  return e.kind==='food'?'dinner':e.kind==='hotel'?'stay':['flight','train','taxi'].includes(e.kind)?'transport':'morning';
 }
 export interface Day {id:string;date:string;city:string;title:string;events:Event[]}
+// The editable event order is the itinerary order; backups never enter the route.
+export function activityStops(day:Day):Event[] {
+ return day.events.filter(e=>!isAlternative(e)&&['sight','food','walk','nature','visit','shopping','activity'].includes(e.kind)&&planningSlot(e)!=='transport');
+}
+export function dayConnections(days:Day[]):[number,number][][] {
+ return days.map(d=>activityStops(d).map(e=>[e.lng,e.lat] as [number,number])).filter(points=>points.length>1);
+}
 export interface Cursor {day:number;event:number;progress:number}
 // Preview progress is an animation fraction, not the itinerary's elapsed time.
 export function isLastStop(days:Day[],cursor:Cursor):boolean {
