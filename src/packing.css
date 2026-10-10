@@ -20,15 +20,11 @@
 .packing-tools{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;font-size:11px;color:#788670}
 .packing-save-hint{line-height:26px}
 .packing-restore{border:0;background:transparent;padding:5px 0;color:#64785f;font-size:11px;text-decoration:underline;text-underline-offset:3px}
-.packing-adjust{margin-left:auto;min-width:0}
-.packing-adjust summary{font-size:11px;line-height:26px;cursor:pointer;color:#64785f}
-.packing-adjust[open]{width:100%;margin:0}
-.packing-adjust-body{max-width:460px;padding:6px 0 12px}
+.packing-tool-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}.packing-tool-actions button{min-height:44px;border:1px solid #bfd1bf;border-radius:8px;background:#eef4e9;color:#28594e;font-size:12px;padding:9px 12px}.packing-tool-actions button[aria-expanded=true]{background:#173e42;border-color:#173e42;color:#fff}.packing-adjust{margin-top:12px}.packing-adjust h2,.packing-template-body h2{font-size:13px;font-weight:600;color:#496a59;margin:0 0 8px}.packing-adjust-body{max-width:460px;padding:6px 0 12px}
 .packing-page .extra-row{align-items:center}
 .packing-page .extra-row input{min-width:0;font-size:12px}
 .packing-page .extra-row button{min-width:32px;min-height:36px}
-.packing-page .template-editor{max-width:none;padding:8px 0 0;margin-top:8px}
-.packing-page .template-editor summary{font-size:11px;color:#788670;line-height:1.7}
+.packing-page .template-editor{max-width:none;border-top:1px solid #dce4d7;padding:14px 0 0;margin-top:14px}
 .packing-template-body{padding-top:8px}
 .packing-template-body textarea{display:block}
 .packing-feedback{font-size:12px;margin:0 0 10px;line-height:1.6}
@@ -57,10 +53,12 @@
 @media(max-width:700px) and (max-height:740px){
  .page-content.packing-page{padding:10px 12px 4px}
  .packing-page .page-heading{margin-bottom:8px}
- .packing-card{padding:8px}
+ .packing-card{padding:6px 8px}
  .packing-card h2{margin-bottom:3px}
  .packing-page .check-item,.packing-page .omit-item{min-height:32px}
- .packing-reminders{grid-template-columns:1fr 1fr;gap:10px;margin-top:5px;padding:8px 0}
+ .packing-reminders{grid-template-columns:1fr 1fr;gap:10px;margin-top:5px;padding:6px 0}
  .packing-page .packing-private-reminder textarea{height:40px;min-height:40px}
  .packing-page .template-editor{margin-top:4px;padding-top:4px}
 }
+
+@media(max-width:700px){.packing-tool-actions{width:100%;margin:0}.packing-tool-actions button{flex:1;padding-inline:8px}.packing-tools{gap:4px}.packing-save-hint{line-height:18px}}

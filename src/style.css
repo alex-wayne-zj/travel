@@ -18,3 +18,5 @@
 .backup-wishes{flex:1}.planner,.alternatives{min-width:0}
 @media(max-width:600px){.primary-wishes,.backup-wishes{gap:7px}.primary-wishes .wish-card,.backup-wishes .wish-card{flex-basis:160px;min-height:74px}.alternatives-label{margin-bottom:2px}}
 .primary-wishes .wish-card:focus-visible,.backup-wishes .wish-card:focus-visible{outline:2px solid #317966;outline-offset:1px}
+
+.stay{background:#eee9f4;border-color:#cfc0df;border-left:3px solid #8a70a3}.stay small,.stay>svg{color:#66527b}.wish-card.meal-breakfast{background:#f8f0da;border-color:#dcc99c}.meal-breakfast .wish-label{color:#80622d}.wish-card.meal-lunch{background:#e5f1e8;border-color:#b8d3c1}.meal-lunch .wish-label{color:#365f49}.wish-card.meal-dinner{background:#f5e5de;border-color:#dbbeb2}.meal-dinner .wish-label{color:#855b4b}.wish-card.active,.stay.active,.ticket.active{background:#173e42;border-color:#0f2d31;color:#fff;box-shadow:inset 0 0 0 1px #0f2d31}.wish-card.active .wish-label,.stay.active small,.stay.active>svg,.ticket.active svg,.ticket.active small,.ticket.active .ticket-schedule strong{color:#fff}

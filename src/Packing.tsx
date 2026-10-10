@@ -5,7 +5,7 @@ import './packing.css';
 export default function PackingPage({trip,template,onSaved,onTemplate,onDirty}:{trip:Trip;template:Template;onSaved:(t:Trip)=>void;onTemplate:(t:Template)=>void;onDirty:(dirty:boolean)=>void}){
  const [draft,setDraft]=useState(()=>structuredClone(trip.packing));
  const [shared,setShared]=useState(()=>structuredClone(template));
- const [editingTemplate,setEditingTemplate]=useState(false);
+ const [editingTemplate,setEditingTemplate]=useState(false),[editingItems,setEditingItems]=useState(false);
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
  const errorRef=useRef<HTMLParagraphElement>(null);
  function reportError(message:string){setError(message);requestAnimationFrame(()=>{errorRef.current?.scrollIntoView({block:'nearest'});errorRef.current?.focus({preventScroll:true});});}
@@ -65,15 +65,20 @@ export default function PackingPage({trip,template,onSaved,onTemplate,onDirty}:{
     </div>
     <section className="packing-reminders" aria-label="提醒">
      <div className="packing-base-reminder"><h2>提醒</h2><p className="notes">{draft.baseNotes??template.notes}</p></div>
-     <label className="packing-private-reminder">个人提醒
-      <textarea aria-label="目的地与个人提醒" maxLength={10000} rows={2} value={draft.notes} placeholder="记下这趟旅程需要留意的事。" onChange={e=>setDraft({...draft,notes:e.target.value})}/>
+     <label className="packing-private-reminder">注意事项
+      <textarea aria-label="注意事项" maxLength={10000} rows={2} value={draft.notes} placeholder="记下这趟旅程需要留意的事。" onChange={e=>setDraft({...draft,notes:e.target.value})}/>
      </label>
     </section>
     <div className="packing-tools">
      <span className="packing-save-hint">勾选后保存 · 仅此旅程</span>
      {draft.hiddenBaseIds.length>0&&<button className="packing-restore" onClick={()=>setDraft({...draft,hiddenBaseIds:[]})}>恢复隐藏物品</button>}
-     <details className="packing-adjust">
-      <summary>调整物品</summary>
+     <div className="packing-tool-actions">
+      <button type="button" aria-expanded={editingItems} aria-controls="packing-adjust-body" onClick={()=>setEditingItems(!editingItems)}>调整本次行李</button>
+      <button type="button" aria-expanded={editingTemplate} aria-controls="packing-template-body" onClick={()=>setEditingTemplate(!editingTemplate)}>管理共用模板</button>
+     </div>
+    </div>
+    {editingItems&&<section className="packing-adjust" id="packing-adjust-body" aria-label="特殊物品">
+     <h2>特殊物品</h2>
       <div className="packing-adjust-body">
        {draft.extraItems.map((item,n)=><div className="extra-row" key={item.id}>
         <input aria-label="补充物品" maxLength={200} placeholder="物品名称" value={item.label} onChange={e=>changeItem(n,'label',e.target.value)}/>
@@ -81,11 +86,9 @@ export default function PackingPage({trip,template,onSaved,onTemplate,onDirty}:{
        </div>)}
        <button className="quiet" disabled={draft.extraItems.length>=100} onClick={extra}>＋ 添加物品</button>
       </div>
-     </details>
-    </div>
-    <details className="template-editor" open={editingTemplate} onToggle={e=>setEditingTemplate(e.currentTarget.open)}>
-     <summary>管理共用模板 · 只影响新旅程</summary>
-     {editingTemplate&&<div className="packing-template-body">
+    </section>}
+    {editingTemplate&&<section className="template-editor packing-template-body" id="packing-template-body" aria-label="共用模板">
+     <h2>共用模板</h2>
       <p className="muted">已有旅行保留创建时的清单与提醒。模板不会覆盖其他旅程。</p>
       {shared.items.map((item,n)=><div className="template-row" key={item.id}>
        <input aria-label="模板分类" maxLength={80} value={item.category} onChange={e=>setShared({...shared,items:shared.items.map((x,k)=>k===n?{...x,category:e.target.value}:x)})}/>
@@ -95,8 +98,7 @@ export default function PackingPage({trip,template,onSaved,onTemplate,onDirty}:{
       <button className="quiet" disabled={shared.items.length>=100} onClick={()=>setShared({...shared,items:[...shared.items,{id:crypto.randomUUID(),label:'',category:'日常必备'} as PackingItem]})}>＋ 添加模板物品</button>
       <textarea aria-label="共用提醒" maxLength={10000} rows={5} value={shared.notes} onChange={e=>setShared({...shared,notes:e.target.value})}/>
       <button className="solid" disabled={busy||shared.items.some(i=>!i.label.trim()||!i.category.trim())} onClick={saveTemplate}>保存共用模板</button>
-     </div>}
-    </details>
+    </section>}
    </fieldset>
   </div>
  </section>;

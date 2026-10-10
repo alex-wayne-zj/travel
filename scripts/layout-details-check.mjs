@@ -81,14 +81,14 @@ try{
    await noOverflow(page);await screen(page,'transport-'+width);result.transport={width:Math.round(ticket.width),height:Math.round(ticket.height)};
    await packing(page);
    assert.equal(await page.locator('.check-item').count(),7);assert.equal(await page.getByText('模板独有物品',{exact:true}).count(),0);
-   assert.equal(await page.locator('.packing-adjust').evaluate(n=>n.open),false);assert.equal(await page.locator('.template-editor').evaluate(n=>n.open),false);
+   assert.equal(await page.getByRole('button',{name:'调整本次行李',exact:true}).evaluate(n=>n.getAttribute('aria-expanded')==='true'),false);assert.equal(await page.getByRole('button',{name:'管理共用模板',exact:true}).evaluate(n=>n.getAttribute('aria-expanded')==='true'),false);
    assert.equal(await page.getByText('这次旅行，多带一点',{exact:true}).count(),0);
    result.ordinary=await packingFit(page,height);assert.equal(result.ordinary.oneScreen,true,'常见7项清单与简短提醒未在一屏展示');
    await noOverflow(page);await screen(page,'packing-7-'+width);
    await page.getByRole('checkbox',{name:'历史转换插头',exact:true}).check();
-   await page.getByRole('textbox',{name:'目的地与个人提醒',exact:true}).fill('A 私有提醒更新');
-   await page.locator('.packing-adjust summary').click();assert.equal(await page.getByRole('textbox',{name:'补充物品',exact:true}).count(),2);await page.locator('.packing-adjust summary').click();
-   await page.locator('.template-editor summary').click();assert.equal(await page.getByRole('textbox',{name:'模板物品',exact:true}).inputValue(),'模板独有物品');await page.locator('.template-editor summary').click();
+   await page.getByRole('textbox',{name:'注意事项',exact:true}).fill('A 私有提醒更新');
+   await page.getByRole('button',{name:'调整本次行李',exact:true}).click();assert.equal(await page.getByRole('textbox',{name:'补充物品',exact:true}).count(),2);await page.getByRole('button',{name:'调整本次行李',exact:true}).click();
+   await page.getByRole('button',{name:'管理共用模板',exact:true}).click();assert.equal(await page.getByRole('textbox',{name:'模板物品',exact:true}).inputValue(),'模板独有物品');await page.getByRole('button',{name:'管理共用模板',exact:true}).click();
    const before=structuredClone(state.trips.get(ids.a));await savePacking(page);
    const captured=state.successful.at(-1);assert.equal(captured.id,ids.a);assert.equal(captured.payload.version,before.version);
    assert.deepEqual(captured.payload.packing.baseItems,before.packing.baseItems);assert.equal(captured.payload.packing.baseNotes,before.packing.baseNotes);assert.deepEqual(captured.payload.packing.extraItems,before.packing.extraItems);assert.ok(captured.payload.packing.checkedIds.includes('a-extra-1'));
@@ -96,10 +96,10 @@ try{
    await selectTrip(page,'海边小旅行');
    const stay=await page.locator('.stay').boundingBox();assert.ok(stay.width<=245,'单住宿卡过宽');assert.ok(stay.height>=76,'单住宿卡过矮');
    await noOverflow(page);await screen(page,'single-stay-'+width);result.stay={width:Math.round(stay.width),height:Math.round(stay.height)};
-   await packing(page);assert.equal(await page.getByRole('textbox',{name:'目的地与个人提醒',exact:true}).inputValue(),'B 的个人提醒');assert.equal(await page.getByRole('checkbox',{name:'防水袋',exact:true}).isChecked(),false);assert.equal(await page.getByRole('checkbox',{name:'护照',exact:true}).isChecked(),true);
-   await selectTrip(page,'德法慢旅行');await packing(page);assert.equal(await page.getByRole('checkbox',{name:'历史转换插头',exact:true}).isChecked(),true);assert.equal(await page.getByRole('textbox',{name:'目的地与个人提醒',exact:true}).inputValue(),'A 私有提醒更新');
-   state.failNext=true;await page.getByRole('textbox',{name:'目的地与个人提醒',exact:true}).fill('失败后仍保留的草稿');await page.getByRole('button',{name:'保存清单',exact:true}).click();await page.getByRole('alert').filter({hasText:'模拟保存失败'}).waitFor();
-   assert.equal(await page.getByRole('status').filter({hasText:/^已保存$/}).count(),0,'保存失败仍显示成功');assert.equal(await page.getByRole('textbox',{name:'目的地与个人提醒',exact:true}).inputValue(),'失败后仍保留的草稿');assert.equal(state.trips.get(ids.a).packing.notes,'A 私有提醒更新');
+   await packing(page);assert.equal(await page.getByRole('textbox',{name:'注意事项',exact:true}).inputValue(),'B 的个人提醒');assert.equal(await page.getByRole('checkbox',{name:'防水袋',exact:true}).isChecked(),false);assert.equal(await page.getByRole('checkbox',{name:'护照',exact:true}).isChecked(),true);
+   await selectTrip(page,'德法慢旅行');await packing(page);assert.equal(await page.getByRole('checkbox',{name:'历史转换插头',exact:true}).isChecked(),true);assert.equal(await page.getByRole('textbox',{name:'注意事项',exact:true}).inputValue(),'A 私有提醒更新');
+   state.failNext=true;await page.getByRole('textbox',{name:'注意事项',exact:true}).fill('失败后仍保留的草稿');await page.getByRole('button',{name:'保存清单',exact:true}).click();await page.getByRole('alert').filter({hasText:'模拟保存失败'}).waitFor();
+   assert.equal(await page.getByRole('status').filter({hasText:/^已保存$/}).count(),0,'保存失败仍显示成功');assert.equal(await page.getByRole('textbox',{name:'注意事项',exact:true}).inputValue(),'失败后仍保留的草稿');assert.equal(state.trips.get(ids.a).packing.notes,'A 私有提醒更新');
    const failureAlert=await page.getByRole('alert').filter({hasText:'模拟保存失败'}).boundingBox();assert.ok(failureAlert.y>=0&&failureAlert.y+failureAlert.height<=height,'保存错误未在视口内显示');
    assert.equal(await page.getByRole('alert').filter({hasText:'模拟保存失败'}).evaluate(n=>n===document.activeElement),true,'保存错误未获得焦点');
    await savePacking(page);assert.equal(state.trips.get(ids.a).packing.notes,'失败后仍保留的草稿');result.dataIsolation=true;result.saveFailureRetainsDraft=true;result.savedVersion=true;assert.deepEqual(state.errors,[]);
@@ -111,7 +111,7 @@ try{
    try{
     await packing(longRun.page);assert.equal(await longRun.page.locator('.check-item').count(),50);result.long=await packingFit(longRun.page,height);assert.ok(result.long.scrollPixels>0,'极长清单不能在workspace正常滚动');
     await longRun.page.locator('.workspace').evaluate(n=>{n.scrollTop=n.scrollHeight;});
-    const footer=await longRun.page.locator('.template-editor summary').boundingBox();assert.ok(footer.y>=0&&footer.y+footer.height<=height,'长清单底部被裁切');
+    const footer=await longRun.page.getByRole('button',{name:'管理共用模板',exact:true}).boundingBox();assert.ok(footer.y>=0&&footer.y+footer.height<=height,'长清单底部被裁切');
     await noOverflow(longRun.page);await screen(longRun.page,'packing-50-bottom-'+width);result.long.bottomReachable=true;
    }finally{await longRun.page.close();}
   }

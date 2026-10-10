@@ -7,7 +7,7 @@ try{
  const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[],responses=[];
  page.on('console',m=>{if(m.type()==='error')errors.push(m.text().slice(0,300));});
  page.on('pageerror',e=>errors.push(e.message));
- page.on('response',r=>{if(r.url().includes('/map-pack'))responses.push({path:new URL(r.url()).pathname,status:r.status()});});
+ page.on('response',r=>{if(r.url().includes('/map-pack'))responses.push({path:new URL(r.url()).pathname,status:r.status(),method:r.request().method()});});
  await page.goto((process.env.TRAVEL_TEST_URL||'http://127.0.0.1:5190/'));
  await page.locator('input[name=password]').fill(readFileSync(process.env.TRAVEL_TEST_PASSWORD_FILE||(()=>{throw Error('Set TRAVEL_TEST_PASSWORD_FILE to a private test credential file');})(),'utf8').trim());
  await page.getByRole('button',{name:'进入我的旅途',exact:true}).click();await page.locator('.journey').waitFor();
@@ -15,7 +15,7 @@ try{
  const download=page.waitForEvent('download',{timeout:230000}).catch(()=>null);
  await page.getByRole('button',{name:'导出离线 HTML',exact:true}).click();
  const file=await download;clearInterval(progressTimer);
- if(file){await file.saveAs('.artifacts/download-live.html');const html=readFileSync('.artifacts/download-live.html','utf8');assert.ok(html.includes('trip-data'));const off=await browser.newPage();await off.context().setOffline(true);await off.goto('file://'+process.cwd()+'/.artifacts/download-live.html');await off.locator('#map img').waitFor();assert.equal(await off.locator('#dates button').count(),11);for(let i=0;i<11;i++){await off.locator('#dates button').nth(i).click();assert.ok(await off.locator('#map img').evaluate(e=>e.complete&&e.naturalWidth===900));}await off.locator('#packing-toggle').click();await off.locator('#packing').waitFor();await off.close();console.log(JSON.stringify({download:true,bytes:html.length,mapCount:(html.match(/data:image\/png;base64,/g)||[]).length,responses,errors}));}
+ if(file){await file.saveAs('.artifacts/download-live.html');const html=readFileSync('.artifacts/download-live.html','utf8');assert.ok(html.includes('trip-data'));const off=await browser.newPage();await off.context().setOffline(true);await off.goto('file://'+process.cwd()+'/.artifacts/download-live.html');await off.locator('#day-content article').first().waitFor();assert.equal(await off.locator('#map').count(),0);assert.equal(await off.locator('#dates button').count(),11);for(let i=0;i<11;i++){await off.locator('#dates button').nth(i).click();assert.ok(await off.locator('#day-content article').count()>0);}assert.ok(!responses.some(r=>r.method==='POST'),'下载触发了地图制作');await off.locator('#packing-toggle').click();await off.locator('#packing').waitFor();await off.close();console.log(JSON.stringify({download:true,bytes:html.length,mapCount:(html.match(/data:image\/png;base64,/g)||[]).length,responses,errors}));}
  else{console.log(JSON.stringify({download:false,error:await page.locator('.app-error').allTextContents(),responses,errors}));}
  writeFileSync('.artifacts/download-live-result.json',JSON.stringify({download:!!file,responses,errors},null,2));
 }finally{await browser.close();}

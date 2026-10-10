@@ -37,7 +37,7 @@
 .editor-pick small{font-size:11px;color:#617f6b}
 .trip-editor .editor-delete{color:#974833;justify-self:start}
 .editor-footer{border-top:1px solid #dce4d7;margin-top:24px;padding-top:18px}
-.trip-editor .editor-delete-trip{padding:8px 0;border:0;background:transparent;color:#974833;font-size:12px}
+.trip-editor .editor-delete-trip{min-height:44px;padding:10px 15px;border:1px solid #a13e38;border-radius:8px;background:#a13e38;color:#fff;font-size:13px}.trip-editor .editor-delete-trip:hover{background:#85332e;border-color:#85332e}
 .editor-error{padding:12px;background:#fff0e9;border-radius:8px;color:#943f2a;font-size:13px;line-height:1.6;margin:0 0 20px}
 .editor-error span{display:inline-block}
 .editor-empty{font-size:14px;color:#748385;line-height:1.7;padding:12px 0}

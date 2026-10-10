@@ -92,7 +92,7 @@ export default function Journey({trip,onEdit}:{trip:Trip,onEdit:()=>void}) {
   setPreviewStarted(true);setScope('event');setFollow(true);setPlaying(true);
  }
  function wishButton(e:Event,slot?:string) {
-  return <button key={e.id} className={`wish-card ${isAlternative(e)?'backup-card':''} ${e.id===event?.id?'active':''}`} data-event={e.id} aria-pressed={e.id===event?.id} onClick={()=>select(e.id)}>
+  return <button key={e.id} className={`wish-card meal-${planningSlot(e)} ${isAlternative(e)?'backup-card':''} ${e.id===event?.id?'active':''}`} data-event={e.id} aria-pressed={e.id===event?.id} onClick={()=>select(e.id)}>
    <span className="wish-label"><Icon kind={e.kind} size={15}/>{slot}{slot?' · ':''}{isAlternative(e)?'备选':labels[e.kind]}</span><strong>{e.title}</strong>
   </button>;
  }
