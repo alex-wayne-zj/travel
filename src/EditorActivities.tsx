@@ -15,6 +15,7 @@ export default function EditorActivities(props:Props){
  const list=useRef<HTMLDivElement>(null),latest=useRef(props),current=useRef(events),drag=useRef<Drag|null>(null),frame=useRef(0),anchorFrame=useRef(0);
  const floating=useRef<HTMLElement|null>(null),positions=useRef(new Map<string,number>()),animations=useRef(new Map<HTMLElement,Animation>());
  latest.current=props;current.current=events;
+ const knownIds=useRef(new Set(events.map(event=>event.id)));
  const [dragging,setDragging]=useState<string|null>(null),[notice,setNotice]=useState('');
  const [settled,setSettled]=useState(open===null);
  useEffect(()=>{if(open!==null){setSettled(false);return;}if(matchMedia('(prefers-reduced-motion: reduce)').matches){setSettled(true);return;}const timer=setTimeout(()=>setSettled(true),260);return()=>clearTimeout(timer);},[open]);
@@ -25,6 +26,16 @@ export default function EditorActivities(props:Props){
   positions.current=new Map([...list.current?.querySelectorAll<HTMLElement>('.editor-event')||[]].map(card=>[card.dataset.eventId!,card.offsetTop+new DOMMatrixReadOnly(getComputedStyle(card).transform).m42]));
   current.current=next;latest.current.onOrder(next);
  }
+ // A newly appended card can be far below the add buttons in a long day.
+ useLayoutEffect(()=>{
+  const added=events.find(event=>event.id===open&&!knownIds.current.has(event.id));
+  knownIds.current=new Set(events.map(event=>event.id));if(!added)return;
+  const heading=list.current?.querySelector<HTMLButtonElement>(`[data-event-id="${CSS.escape(added.id)}"] .editor-event-heading`),workspace=list.current?.closest<HTMLElement>('.workspace');
+  if(!heading||!workspace)return;cancelAnimationFrame(anchorFrame.current);
+  const top=workspace.getBoundingClientRect().top+16,start=performance.now();
+  const reveal=()=>{if(!heading.isConnected)return;workspace.scrollTop+=heading.getBoundingClientRect().top-top;if(!reduced()&&performance.now()-start<300)anchorFrame.current=requestAnimationFrame(reveal);};
+  heading.focus({preventScroll:true});anchorFrame.current=requestAnimationFrame(reveal);
+ },[events,open]);
  function lift(state:Drag){
   floating.current?.remove();
   const card=state.handle.closest<HTMLElement>('.editor-event');if(!card)return;
