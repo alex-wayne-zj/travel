@@ -113,7 +113,7 @@ export default function Journey({trip,onEdit}:{trip:Trip,onEdit:()=>void}) {
      {days.map((d,i)=><button key={d.id} aria-current={i===dayIndex?'date':undefined} onClick={()=>{if(!drag.current?.moved)chooseDay(i);}}><span>DAY {String(i+1).padStart(2,'0')}<small>{d.date.slice(5).replace('-','/')}</small></span><strong>{d.city}</strong></button>)}
     </nav><button className="date-arrow" aria-label="后一天" disabled={dayIndex===days.length-1} onClick={()=>chooseDay(dayIndex+1)}><ChevronRight size={18}/></button>
    </div>
-   <div className="planner-row"><span className="row-title" aria-label="住宿与交通"><span>住宿</span><span aria-hidden="true">&amp;</span><span>交通</span></span><div className="travel-stay">
+   <div className="planner-row"><span className="row-title" aria-label="住宿与交通"><span>住宿</span><span aria-hidden="true">&amp;</span><span>交通</span></span><div className="travel-stay" role="region" aria-label="天气、住宿与交通" tabIndex={0}>
     <WeatherCard trip={trip} day={day}/>
     {transport.map(e=><button className={`ticket ${e.id===event?.id?'active':''}`} key={e.id} data-event={e.id} aria-pressed={e.id===event?.id} onClick={()=>select(e.id)}><Icon kind={e.kind} size={20}/><span className="ticket-route"><small>{labels[e.kind]}</small><strong>{e.title}</strong></span><span className="ticket-schedule"><strong>{e.time||'待定'}</strong><small>始发{e.endTime&&` · ${e.endTime} 抵达`}</small></span></button>)}
     {hotel&&<button className={`stay ${hotel.id===event?.id?'active':''}`} data-event={hotel.id} aria-pressed={hotel.id===event?.id} onClick={()=>select(hotel.id)}><BedDouble size={17}/><span><small>{hotel.stayLabel||'住宿待选'}</small><strong>{hotel.title}</strong></span></button>}
