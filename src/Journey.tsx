@@ -114,11 +114,11 @@ export default function Journey({trip,onEdit}:{trip:Trip,onEdit:()=>void}) {
     </nav><button className="date-arrow" aria-label="后一天" disabled={dayIndex===days.length-1} onClick={()=>chooseDay(dayIndex+1)}><ChevronRight size={18}/></button>
    </div>
    <div className="planner-row"><span className="row-title" aria-label="住宿与交通"><span>住宿</span><span aria-hidden="true">&amp;</span><span>交通</span></span><div className="travel-stay">
+    <WeatherCard trip={trip} day={day}/>
     {transport.map(e=><button className={`ticket ${e.id===event?.id?'active':''}`} key={e.id} data-event={e.id} aria-pressed={e.id===event?.id} onClick={()=>select(e.id)}><Icon kind={e.kind} size={20}/><span className="ticket-route"><small>{labels[e.kind]}</small><strong>{e.title}</strong></span><span className="ticket-schedule"><strong>{e.time||'待定'}</strong><small>始发{e.endTime&&` · ${e.endTime} 抵达`}</small></span></button>)}
     {hotel&&<button className={`stay ${hotel.id===event?.id?'active':''}`} data-event={hotel.id} aria-pressed={hotel.id===event?.id} onClick={()=>select(hotel.id)}><BedDouble size={17}/><span><small>{hotel.stayLabel||'住宿待选'}</small><strong>{hotel.title}</strong></span></button>}
     {!hotel&&<button className="stay empty-slot" onClick={onEdit}><BedDouble size={17}/><span><small>住宿</small><strong>＋ 添加住宿</strong></span></button>}
     {transport.length===0&&<button className="ticket empty-slot" onClick={onEdit}><Car size={20}/><span className="ticket-route"><small>交通</small><strong>＋ 添加交通</strong></span></button>}
-    <WeatherCard trip={trip} day={day}/>
    </div></div>
    <div className="planner-row"><span className="row-title">行程</span><div className="primary-wishes" role="region" aria-label="想去与想吃" tabIndex={0}>{Object.entries(slotLabels).flatMap(([slot,label])=>{
     const matches=primary.filter(e=>planningSlot(e)===slot);
