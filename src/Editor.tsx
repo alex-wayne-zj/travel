@@ -1,3 +1,4 @@
+import type {LocationPick} from './map-import';
 import {useEffect,useRef,useState} from 'react';
 import type {Trip,TripInput} from './api';
 import {isAlternative,type Day,type Event} from './model';
@@ -11,7 +12,7 @@ import {dates,validateEvents} from './editor-validation';
 import './editor.css';
 
 const uid=()=>crypto.randomUUID();
-type EditorProps={trip:Trip|null;onSave:(input:TripInput)=>Promise<void>;onCancel:()=>void;onPick?:(lat:number,lng:number,onConfirm:(lat:number,lng:number)=>void)=>void;onDirty?:(dirty:boolean)=>void;onDelete?:()=>void};
+type EditorProps={trip:Trip|null;onSave:(input:TripInput)=>Promise<void>;onCancel:()=>void;onPick?:LocationPick;onDirty?:(dirty:boolean)=>void;onDelete?:()=>void};
 export default function Editor({trip,onSave,onCancel,onPick,onDirty,onDelete}:EditorProps){
  const confirm=useConfirmation(),errorRef=useRef<HTMLDivElement>(null),errorFocusFrame=useRef(0),errorObserver=useRef<ResizeObserver|null>(null);
  useEffect(()=>()=>{cancelAnimationFrame(errorFocusFrame.current);errorObserver.current?.disconnect();},[]);

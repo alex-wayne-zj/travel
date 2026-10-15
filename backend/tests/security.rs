@@ -483,7 +483,7 @@ async fn session_expiry_logout_password_rotation() {
     let (c, _) = login(&r).await;
     a.db.lock()
         .unwrap()
-        .execute("UPDATE sessions SET last_seen=?1", [now() - 12 * 3600])
+        .execute("UPDATE sessions SET last_seen=?1", [now() - 6 * 86400])
         .unwrap();
     assert_eq!(
         call(
@@ -498,14 +498,14 @@ async fn session_expiry_logout_password_rotation() {
         )
         .await
         .0,
-        StatusCode::UNAUTHORIZED
+        StatusCode::OK
     );
     let (c, _) = login(&r).await;
     a.db.lock()
         .unwrap()
         .execute(
             "UPDATE sessions SET created_at=?1",
-            params![now() - 7 * 86400],
+            params![now() - 30 * 86400],
         )
         .unwrap();
     assert_eq!(
@@ -1452,4 +1452,265 @@ fn activity_types_keep_legacy_and_coordinate_boundaries() {
             accepted
         );
     }
+}
+
+#[tokio::test]
+async fn weather_requires_session_and_ownership_and_handles_unforecastable_days() {
+    let a = app();
+    let r = router(a.clone());
+    let (cookie, _) = login(&r).await;
+    let (id, mut body): (String, Value) = {
+        let db = a.db.lock().unwrap();
+        let (id, raw): (String, String) = db
+            .query_row(
+                "SELECT id,body FROM trips WHERE owner_id='admin' LIMIT 1",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        (id, serde_json::from_str(&raw).unwrap())
+    };
+    let day_id = body["days"][0]["id"].as_str().unwrap().to_owned();
+    let path = format!("/api/trips/{id}/weather/{day_id}");
+    assert_eq!(
+        call(&r, "GET", &path, Value::Null, None, None, None, "1.1.1.1")
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    // A known trip id belonging to a different account must remain inaccessible.
+    a.db.lock()
+        .unwrap()
+        .execute("UPDATE trips SET owner_id='other' WHERE id=?1", [&id])
+        .unwrap();
+    assert_eq!(
+        call(
+            &r,
+            "GET",
+            &path,
+            Value::Null,
+            Some(&cookie),
+            None,
+            None,
+            "1.1.1.1"
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND
+    );
+    a.db.lock()
+        .unwrap()
+        .execute("UPDATE trips SET owner_id='admin' WHERE id=?1", [&id])
+        .unwrap();
+    body["days"][0]["date"] = json!("2100-01-01");
+    a.db.lock()
+        .unwrap()
+        .execute(
+            "UPDATE trips SET body=?1 WHERE id=?2",
+            params![body.to_string(), id],
+        )
+        .unwrap();
+    let (status, value, _) = call(
+        &r,
+        "GET",
+        &path,
+        Value::Null,
+        Some(&cookie),
+        None,
+        None,
+        "1.1.1.1",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(value["status"], "future");
+    body["days"][0]["date"] = json!("2000-01-01");
+    a.db.lock()
+        .unwrap()
+        .execute(
+            "UPDATE trips SET body=?1 WHERE id=?2",
+            params![body.to_string(), id],
+        )
+        .unwrap();
+    assert_eq!(
+        call(
+            &r,
+            "GET",
+            &path,
+            Value::Null,
+            Some(&cookie),
+            None,
+            None,
+            "1.1.1.1"
+        )
+        .await
+        .1["status"],
+        "past"
+    );
+    body["days"][0]["events"] = json!([]);
+    a.db.lock()
+        .unwrap()
+        .execute(
+            "UPDATE trips SET body=?1 WHERE id=?2",
+            params![body.to_string(), id],
+        )
+        .unwrap();
+    assert_eq!(
+        call(
+            &r,
+            "GET",
+            &path,
+            Value::Null,
+            Some(&cookie),
+            None,
+            None,
+            "1.1.1.1"
+        )
+        .await
+        .1["status"],
+        "no-location"
+    );
+    assert_eq!(
+        call(
+            &r,
+            "GET",
+            &format!("/api/trips/{id}/weather/missing"),
+            Value::Null,
+            Some(&cookie),
+            None,
+            None,
+            "1.1.1.1"
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[tokio::test]
+async fn map_link_import_requires_login_csrf_and_a_known_map_host() {
+    let a = app();
+    let r = router(a);
+    let path = "/api/map-links/resolve";
+    let body = json!({"url":"https://surl.amap.com/example"});
+    assert_eq!(
+        call(
+            &r,
+            "POST",
+            path,
+            body.clone(),
+            None,
+            None,
+            Some(ORIGIN),
+            "1.1.1.1"
+        )
+        .await
+        .0,
+        StatusCode::UNAUTHORIZED
+    );
+    let (cookie, csrf) = login(&r).await;
+    assert_eq!(
+        call(
+            &r,
+            "POST",
+            path,
+            body,
+            Some(&cookie),
+            None,
+            Some(ORIGIN),
+            "1.1.1.1"
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        call(
+            &r,
+            "POST",
+            path,
+            json!({"url":"https://maps.apple.com.evil.test/"}),
+            Some(&cookie),
+            Some(&csrf),
+            Some(ORIGIN),
+            "1.1.1.1"
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+}
+
+#[tokio::test]
+async fn idle_sessions_survive_both_login_cleanup_paths() {
+    let a = app();
+    let r = router(a.clone());
+    let (admin, csrf) = login(&r).await;
+    configure_friend(&r, &admin, &csrf, "DemoAlice", "river-forest-train").await;
+    let (friend, _) = friend_login(&r, "DemoAlice", "river-forest-train", "2.2.2.2").await;
+    let created = now() - 29 * 86400;
+    a.db.lock()
+        .unwrap()
+        .execute("UPDATE sessions SET created_at=?1,last_seen=?1", [created])
+        .unwrap();
+    // Logging in must only purge absolute expiry, including sessions of the other account.
+    login(&r).await;
+    friend_login(&r, "DemoAlice", "river-forest-train", "2.2.2.2").await;
+    for cookie in [&admin, &friend] {
+        let (status, _, new_cookie) = call(
+            &r,
+            "GET",
+            "/api/trips",
+            Value::Null,
+            Some(cookie),
+            None,
+            None,
+            "1.1.1.1",
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(new_cookie.is_none(), "activity must not refresh the cookie");
+    }
+    let count: i64 =
+        a.db.lock()
+            .unwrap()
+            .query_row(
+                "SELECT COUNT(*) FROM sessions WHERE created_at=?1",
+                [created],
+                |row| row.get(0),
+            )
+            .unwrap();
+    assert_eq!(
+        count, 2,
+        "activity must not extend either account's creation timestamp"
+    );
+}
+
+#[tokio::test]
+async fn login_cookie_has_fixed_thirty_day_lifetime() {
+    let r = router(app());
+    let response = r
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/login")
+                .header("content-type", "application/json")
+                .header("origin", ORIGIN)
+                .header("x-real-ip", "1.1.1.1")
+                .body(Body::from(
+                    json!({"username":"admin","password":"safe-test-password"}).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let cookie = response
+        .headers()
+        .get("set-cookie")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(cookie.contains("Max-Age=2592000;"));
+    assert!(cookie.contains("HttpOnly"));
+    assert!(cookie.contains("Secure"));
 }

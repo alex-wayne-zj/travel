@@ -1,3 +1,4 @@
+import type {LocationPick} from './map-import';
 import {useEffect,useLayoutEffect,useRef,useState,type PointerEvent as ReactPointerEvent} from 'react';
 import {GripVertical} from 'lucide-react';
 import type {Event} from './model';
@@ -6,7 +7,7 @@ import EditorEvent from './EditorEvent';
 interface Props {
  events:Event[];open:string|null;busy:boolean;onOpen:(id:string|null)=>void;
  onOrder:(events:Event[])=>void;onChange:(id:string,patch:Partial<Event>)=>void;onDelete:(id:string)=>void;
- onPick?:(lat:number,lng:number,onConfirm:(lat:number,lng:number)=>void)=>void;
+ onPick?:LocationPick;
 }
 interface Drag {id:string;pointer:number;x:number;y:number;startX:number;startY:number;active:boolean;original:string[];handle:HTMLButtonElement;rect:DOMRect}
 

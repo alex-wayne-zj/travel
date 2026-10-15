@@ -36,7 +36,7 @@ TRAVEL_DB_PATH=/var/lib/travel/travel.db ./target/release/travel-backend
 
 `init-admin` 拒绝覆盖已有账号。遗失密码可用同样参数执行 `reset-password`，会撤销管理员会话并解除管理员登录锁定（不影响朋友账号）；密码文件由管理员用后清理。正常修改密码通过已认证的 `/api/password`，校验旧密码，轮换当前会话并撤销该账号其他会话。
 
-默认 cookie `__Host-travel_session` 为 host-only、Secure、HttpOnly、SameSite=Strict、Path=/。HTTP 开发使用 `travel_session`。会话随机 token 为 32 字节，只保存 SHA-256 摘要；7 天绝对过期、12 小时闲置过期，最多保留 20 个会话。Argon2id 使用库默认参数，单个密码验证/哈希并发，数据库操作及密码计算运行在 `spawn_blocking`，阻塞数据库任务最多 16 项，超额立即返回 429，不建立无限等待队列。
+默认 cookie `__Host-travel_session` 为 host-only、Secure、HttpOnly、SameSite=Strict、Path=/。HTTP 开发使用 `travel_session`。会话随机 token 为 32 字节，只保存 SHA-256 摘要；自登录起固定 30 天绝对过期，不随访问续期，无闲置过期限制，最多保留 20 个会话。Argon2id 使用库默认参数，单个密码验证/哈希并发，数据库操作及密码计算运行在 `spawn_blocking`，阻塞数据库任务最多 16 项，超额立即返回 429，不建立无限等待队列。
 
 Nginx 必须覆盖 `X-Real-IP` 为 `$remote_addr`；后端只对 loopback peer 信任此头，不使用外部 X-Forwarded-For。所有修改请求，包括登录，必须提交精确 `Origin`；已认证修改另需 `X-CSRF-Token`。用户数据 API 全部认证，响应禁止缓存。错误 JSON 不包含数据库内部错误。
 

@@ -1,6 +1,8 @@
 mod invites;
+mod map_link;
 mod map_pack;
 pub mod model;
+mod weather;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_hash::SaltString};
 use axum::{
     Json, Router,
@@ -24,8 +26,8 @@ use std::{
 };
 use tokio::sync::Semaphore;
 
-const ABSOLUTE: i64 = 7 * 86400;
-const IDLE: i64 = 12 * 3600;
+// Fixed lifetime from login; activity never extends the session or refreshes its cookie.
+const ABSOLUTE: i64 = 30 * 86400;
 pub fn now() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -334,11 +336,13 @@ pub fn router(app: App) -> Router {
         )
         .route("/api/logout", post(logout))
         .route("/api/password", post(change_password))
+        .route("/api/map-links/resolve", post(map_link::resolve))
         .route("/api/trips", get(list_trips).post(create_trip))
         .route(
             "/api/trips/{id}",
             get(get_trip).put(update_trip).delete(delete_trip),
         )
+        .route("/api/trips/{id}/weather/{day_id}", get(weather::daily))
         .route(
             "/api/trips/{id}/map-pack",
             get(map_pack::cached).post(map_pack::prepare),
@@ -487,7 +491,14 @@ struct Auth {
 }
 fn load_auth(c: &Connection, hashed: &str) -> Result<Auth, ApiError> {
     let n = now();
-    let row:Option<(String,String)>=c.query_row("SELECT csrf,account_id FROM sessions WHERE token_hash=?1 AND created_at>?2 AND last_seen>?3",params![hashed,n-ABSOLUTE,n-IDLE],|r|Ok((r.get(0)?,r.get(1)?))).optional().map_err(internal)?;
+    let row: Option<(String, String)> = c
+        .query_row(
+            "SELECT csrf,account_id FROM sessions WHERE token_hash=?1 AND created_at>?2",
+            params![hashed, n - ABSOLUTE],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()
+        .map_err(internal)?;
     let (csrf, account_id) = row.ok_or_else(unauthorized)?;
     let username = if account_id == "admin" {
         c.query_row("SELECT username FROM users WHERE id=1", [], |r| r.get(0))
@@ -531,8 +542,8 @@ async fn authenticate(app: &App, h: &HeaderMap) -> Result<Auth, ApiError> {
     let hashed = hash(t);
     app.run(move |c| {
         c.execute(
-            "DELETE FROM sessions WHERE created_at<=?1 OR last_seen<=?2",
-            params![now() - ABSOLUTE, now() - IDLE],
+            "DELETE FROM sessions WHERE created_at<=?1",
+            params![now() - ABSOLUTE],
         )
         .map_err(internal)?;
         load_auth(c, &hashed)
@@ -656,7 +667,7 @@ async fn login(
         let current_hash:String=tx.query_row("SELECT password_hash FROM users WHERE id=1",[],|r|r.get(0)).map_err(internal)?;
         if current_hash!=verified_hash{return Err(unauthorized());}
         tx.execute("DELETE FROM auth_attempts WHERE key IN (?1,?2)",params![keys[0],keys[1]]).map_err(internal)?;
-        tx.execute("DELETE FROM sessions WHERE created_at<=?1 OR last_seen<=?2",params![n-ABSOLUTE,n-IDLE]).map_err(internal)?;
+        tx.execute("DELETE FROM sessions WHERE created_at<=?1",params![n-ABSOLUTE]).map_err(internal)?;
         tx.execute("DELETE FROM sessions WHERE token_hash IN (SELECT token_hash FROM sessions WHERE account_id='admin' ORDER BY created_at DESC LIMIT -1 OFFSET 19)",[]).map_err(internal)?;
         tx.execute("INSERT INTO sessions(token_hash,csrf,created_at,last_seen) VALUES(?1,?2,?3,?3)",params![th,csrf,n]).map_err(internal)?;
         tx.commit().map_err(internal)?;

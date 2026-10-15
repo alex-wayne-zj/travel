@@ -1,3 +1,4 @@
+import type {LocationPick} from './map-import';
 import {useRef} from 'react';
 import AnimatedPanel from './AnimatedPanel';
 import {isAlternative,planningSlot,type Event,type Kind} from './model';
@@ -14,7 +15,7 @@ interface Props {
  onDelete:()=>void;
  handle?:React.ReactNode;
  dragging?:boolean;
- onPick?:(lat:number,lng:number,onConfirm:(lat:number,lng:number)=>void)=>void;
+ onPick?:LocationPick;
 }
 
 export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onPick,handle,dragging}:Props){
@@ -53,7 +54,7 @@ export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onP
     <input type="checkbox" checked={isAlternative(e)} onChange={x=>onChange({alternative:x.target.checked,slot})}/>
     作为备选<small>备选不会加入路线预览</small>
    </label>
-   <LocationEditor lat={e.lat} lng={e.lng} label="活动位置" onChange={(lat,lng)=>onChange({lat,lng})} onPick={onPick}/>
+   <LocationEditor lat={e.lat} lng={e.lng} label="活动位置" onChange={(lat,lng,place)=>onChange({lat,lng,...(!e.title.trim()&&place?.name?{title:place.name}:{}),...(!e.sourceUrl&&place?.url&&place.url.length<=500?{sourceUrl:place.url}:{}),...(e.kind==='hotel'&&!e.address&&place?.address?{address:place.address}:{})})} onPick={onPick}/>
    <label>开始时间（可选）
     <input type="time" value={e.time||''} onChange={x=>onChange({time:x.target.value||undefined})}/>
    </label>
@@ -78,7 +79,7 @@ export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onP
      <label className="editor-wide">终点名称
       <input maxLength={300} value={to.name} onChange={x=>onChange({to:{...e.to!,name:x.target.value}})}/>
      </label>
-     <LocationEditor lat={to.lat} lng={to.lng} label="交通终点" onChange={(lat,lng)=>onChange({to:{...e.to!,lat,lng}})} onPick={onPick}/>
+     <LocationEditor lat={to.lat} lng={to.lng} label="交通终点" onChange={(lat,lng,place)=>onChange({to:{...e.to!,lat,lng,...(!e.to!.name.trim()&&place?.name?{name:place.name}:{})}})} onPick={onPick}/>
     </>}</AnimatedPanel>
    </>}
    <AnimatedPanel open={e.kind==='hotel'} className="editor-wide" contentClassName="editor-kind-fields">

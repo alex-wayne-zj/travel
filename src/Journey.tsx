@@ -6,6 +6,7 @@ import {Plane,TrainFront,Car,Utensils,Landmark,BedDouble,Footprints,Trees,Shoppi
 import {renderToStaticMarkup} from 'react-dom/server';
 import {api,type Trip} from './api';
 import Logo from './Logo';
+import WeatherCard from './WeatherCard';
 import {OPEN_MAP_STYLE,mapRequest,prepareOnlinePack,type MapPack,type MapPackManifest} from './map-resources';
 import {advance,isLastStop,isAlternative,planningSlot,activityStops,dayConnections,route,point,type Cursor,type Day,type Event,type Kind} from './model';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -117,6 +118,7 @@ export default function Journey({trip,onEdit}:{trip:Trip,onEdit:()=>void}) {
     {hotel&&<button className={`stay ${hotel.id===event?.id?'active':''}`} data-event={hotel.id} aria-pressed={hotel.id===event?.id} onClick={()=>select(hotel.id)}><BedDouble size={17}/><span><small>{hotel.stayLabel||'住宿待选'}</small><strong>{hotel.title}</strong></span></button>}
     {!hotel&&<button className="stay empty-slot" onClick={onEdit}><BedDouble size={17}/><span><small>住宿</small><strong>＋ 添加住宿</strong></span></button>}
     {transport.length===0&&<button className="ticket empty-slot" onClick={onEdit}><Car size={20}/><span className="ticket-route"><small>交通</small><strong>＋ 添加交通</strong></span></button>}
+    <WeatherCard trip={trip} day={day}/>
    </div></div>
    <div className="planner-row"><span className="row-title">行程</span><div className="primary-wishes" role="region" aria-label="想去与想吃" tabIndex={0}>{Object.entries(slotLabels).flatMap(([slot,label])=>{
     const matches=primary.filter(e=>planningSlot(e)===slot);

@@ -1,3 +1,4 @@
+import type {PickDetails} from './map-import';
 import {lazy,Suspense,useEffect,useRef,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Menu,Plus,Luggage,Map,PenLine,LogOut,Settings,X,Download,Users} from 'lucide-react';
@@ -40,7 +41,7 @@ function App(){
  const renderGeneration=generation.current;
  const sessionIdentity=session?.authenticated?session.accountId||`${session.role||'admin'}:${session.username}`:'';
  const [packingDirty,setPackingDirty]=useState(false);
- const [pick,setPick]=useState<{lat:number;lng:number;onConfirm:(lat:number,lng:number)=>void}|null>(null);
+ const [pick,setPick]=useState<{lat:number;lng:number;onConfirm:(lat:number,lng:number,details?:PickDetails)=>void}|null>(null);
  const workspace=useRef<HTMLDivElement>(null),drawer=useRef<HTMLElement>(null),trigger=useRef<HTMLButtonElement>(null),sequence=useRef(0);
  const [mobile,setMobile]=useState(()=>matchMedia('(max-width:900px)').matches);
  useEffect(()=>{const m=matchMedia('(max-width:900px)');const change=()=>setMobile(m.matches);m.addEventListener('change',change);return()=>m.removeEventListener('change',change);},[]);
@@ -78,6 +79,6 @@ function App(){
  <AnimatedPanel open={!!download&&visibleDownload===download.url} className="app-notice">{download&&<div className="export-ready" role="status"><span>离线行程已生成，包含每天活动、备选与行李</span><a href={download.url} download={download.filename}>保存离线文件</a><span>iPhone 可打开后通过分享存到“文件”。</span></div>}</AnimatedPanel><AnimatedPanel open={exporting} className="app-notice"><div className="export-progress" role="status">{exportProgress}</div></AnimatedPanel><AnimatedPanel open={!!displayedError} className="app-notice"><div className="app-error" role="alert">{displayedError}<button onClick={()=>void guardLeave(()=>refresh(trip?.id))}>重试</button></div></AnimatedPanel>
  {loading?<div className="center-message" role="status">正在整理旅途…</div>:<Suspense fallback={<div className="center-message" role="status">正在展开页面…</div>}>
  {view==='invites'&&session.role==='admin'?<InviteSettings/>:view==='settings'?<PasswordPage onSession={accept} session={session}/>:view==='new'||view==='edit'?<><Editor key={view+'-'+(view==='edit'?trip?.id:'new')} trip={view==='new'?null:trip} onSave={save} onCancel={()=>go('journey')} onDirty={setEditorDirty} onDelete={view==='edit'?()=>void remove():undefined} onPick={(lat,lng,onConfirm)=>setPick({lat,lng,onConfirm})}/></>:trip?view==='packing'&&template?<PackingPage key={trip.id} trip={trip} template={template} onSaved={changed} onTemplate={t=>{if(identity.current===sessionIdentity&&generation.current===renderGeneration)setTemplate(t);}} onDirty={setPackingDirty}/>:<Journey key={trip.id+'-'+trip.version} trip={trip} onEdit={()=>go('edit')}/>:<section className="empty-trip"><Logo size={55}/><h1>旅途，从一个念头开始。</h1><p>不必安排每一分钟，先写下想去和想吃。</p><button className="solid" onClick={()=>go('new')}>创建第一趟旅途</button></section>}
- </Suspense>}{pick&&<Suspense fallback={<div className="picker-loading" role="status">正在加载选点地图…</div>}><MapPicker lat={pick.lat} lng={pick.lng} onCancel={()=>setPick(null)} onConfirm={(lat,lng)=>{pick.onConfirm(lat,lng);setPick(null);}}/></Suspense>}</div>{reauth&&<div className="reauth-dialog" role="dialog" aria-modal="true" aria-label="登录过期，请重新登录，草稿已保留"><Login onLogin={accept} initialSession={session}/></div>}</div>;
+ </Suspense>}{pick&&<Suspense fallback={<div className="picker-loading" role="status">正在加载选点地图…</div>}><MapPicker lat={pick.lat} lng={pick.lng} onCancel={()=>setPick(null)} onConfirm={(lat,lng,details)=>{pick.onConfirm(lat,lng,details);setPick(null);}}/></Suspense>}</div>{reauth&&<div className="reauth-dialog" role="dialog" aria-modal="true" aria-label="登录过期，请重新登录，草稿已保留"><Login onLogin={accept} initialSession={session}/></div>}</div>;
 }
 createRoot(document.getElementById('root')!).render(<ConfirmationProvider><App/></ConfirmationProvider>);

@@ -59,7 +59,7 @@ fn id(s: &str) -> bool {
         && s.chars()
             .all(|c| c.is_ascii_alphanumeric() || "-_.:".contains(c))
 }
-fn date(s: &str) -> Option<i64> {
+pub(crate) fn date(s: &str) -> Option<i64> {
     if !s.is_ascii() || s.len() != 10 || s.as_bytes()[4] != b'-' || s.as_bytes()[7] != b'-' {
         return None;
     }

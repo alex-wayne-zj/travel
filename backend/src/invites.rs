@@ -250,7 +250,7 @@ pub async fn login(
  seed_space(c,&id).map_err(internal)?;
  let n=now();let tx=c.transaction().map_err(internal)?;
  for key in &keys{tx.execute("DELETE FROM auth_attempts WHERE key=?1",[key]).map_err(internal)?;}
- tx.execute("DELETE FROM sessions WHERE created_at<=?1 OR last_seen<=?2",params![n-ABSOLUTE,n-IDLE]).map_err(internal)?;
+ tx.execute("DELETE FROM sessions WHERE created_at<=?1",params![n-ABSOLUTE]).map_err(internal)?;
  tx.execute("DELETE FROM sessions WHERE token_hash IN(SELECT token_hash FROM sessions WHERE account_id=?1 ORDER BY created_at DESC LIMIT -1 OFFSET 19)",[&id]).map_err(internal)?;
  tx.execute("INSERT INTO sessions(token_hash,csrf,created_at,last_seen,account_id) VALUES(?1,?2,?3,?3,?4)",params![th,csrf,n,id]).map_err(internal)?;
  tx.commit().map_err(internal)?;load_auth(c,&th)

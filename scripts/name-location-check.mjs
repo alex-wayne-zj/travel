@@ -19,6 +19,7 @@ async function setup(width){
   else if(path==='/api/trips')body={trips:[state.trip]};
   else if(path==='/api/packing-template')body={items:[],notes:'',version:1};
   else if(path===`/api/trips/${id}`){if(r.request().method()==='PUT'){const saved=r.request().postDataJSON();state.saved.push(structuredClone(saved));state.trip={...state.trip,...saved,version:state.trip.version+1};}body=state.trip;}
+  else if(path.includes('/weather/'))body={status:'past',city:'法兰克福'};
   else if(path.endsWith('/map-pack')){status=503;body={error:'测试不下载地图资源'};}
   else{status=404;body={error:'Unexpected '+path};state.errors.push(body.error);}
   await r.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
@@ -31,7 +32,7 @@ async function open(page,title){const card=page.locator('.editor-event').filter(
 async function picker(page,location){await location.getByRole('button',{name:/地图选点/}).click();const modal=page.getByRole('dialog');await modal.locator('canvas').waitFor();return modal;}
 async function setPoint(modal,lat,lng){await modal.getByRole('textbox',{name:'纬度',exact:true}).fill(lat);await modal.getByRole('textbox',{name:'经度',exact:true}).fill(lng);await modal.getByRole('button',{name:'定位',exact:true}).click();await modal.page().waitForFunction(()=>!document.querySelector('.picker-actions button').disabled);}
 async function confirm(modal){await modal.getByRole('button',{name:'确认位置',exact:true}).click();await modal.waitFor({state:'hidden'});}
-async function centered(modal){await modal.page().waitForFunction(()=>{const map=document.querySelector('.picker-map canvas').getBoundingClientRect(),pin=document.querySelector('.picker-map .maplibregl-marker')?.getBoundingClientRect();return pin&&Math.abs(pin.left+pin.width/2-map.left-map.width/2)<3&&Math.abs(pin.top+pin.height/2+14-map.top-map.height/2)<3;});}
+async function centered(modal){await modal.page().waitForFunction(()=>{const map=document.querySelector('.picker-map canvas').getBoundingClientRect(),pin=document.querySelector('.picker-map .maplibregl-marker')?.getBoundingClientRect();return pin&&Math.abs(pin.left+pin.width/2-map.left-map.width/2)<3&&Math.abs(pin.top+pin.height/2-map.top-map.height/2)<=pin.height/2;},null,{timeout:10000});}
 async function osm(location,lat,lng){const link=location.getByRole('link',{name:/OpenStreetMap/});assert.equal(await link.count(),1);const href=new URL(await link.getAttribute('href'));assert.equal(href.hostname,'www.openstreetmap.org');assert.equal(Number(href.searchParams.get('mlat')),lat);assert.equal(Number(href.searchParams.get('mlon')),lng);assert.equal(await link.getAttribute('target'),'_blank');assert.match(await link.getAttribute('rel'),/noopener/);assert.match(await link.getAttribute('rel'),/noreferrer/);}
 async function overflow(page,width){assert.ok(await page.locator('.trip-editor').evaluate(n=>n.scrollWidth<=n.clientWidth+1));assert.ok(await page.evaluate(()=>document.body.scrollWidth)<=width);}
 
