@@ -48,7 +48,7 @@ export default function Editor({trip,onSave,onCancel,onPick,onDirty,onDelete}:Ed
   const current=day?.events.find(e=>e.id===id);if(!current)return;
   if(patch.slot&&patch.alternative===undefined)patch.alternative=isAlternative(current);
   if(patch.slot&&!allowed(patch.slot).includes(editorKind({...current,slot:patch.slot})))patch.kind=allowed(patch.slot)[0];
-  if(patch.kind&&!['flight','train','taxi','walk'].includes(patch.kind))patch.to=undefined;
+  if(patch.kind&&!['flight','train','bus','taxi','walk'].includes(patch.kind))patch.to=undefined;
   changeDay({events:day.events.map(e=>e.id===id?{...e,...patch}:e)});
  }
  function add(slot:Event['slot']){

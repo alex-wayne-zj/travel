@@ -1,4 +1,5 @@
 import {api} from './api';
+import AnimatedPanel from './AnimatedPanel';
 import {mapLinkURL,parseMapPoint,importedCoordinate,storedMapLink,type ImportedPoint,type PickDetails} from './map-import';
 import './map-import.css';
 import {useTimedMessage} from './useTimedMessage';
@@ -19,6 +20,8 @@ export default function MapPicker({lat,lng,onConfirm,onCancel}:{lat:number;lng:n
  const visibleError=useTimedMessage(error);
  const [importText,setImportText]=useState(''),[importError,setImportError]=useState(''),[importBusy,setImportBusy]=useState(false),[imported,setImported]=useState<ImportedPoint|null>(null);
  const importSequence=useRef(0);
+ const [manual,setManual]=useState(false),[pasteFallback,setPasteFallback]=useState(false);
+ const importInput=useRef<HTMLInputElement>(null);
  const importPending=!!importText.trim()&&!imported;
  function clearImport(){++importSequence.current;setImported(null);setImportText('');setImportError('');setImportBusy(false);}
  function previewImport(place:ImportedPoint){
@@ -26,16 +29,28 @@ export default function MapPicker({lat,lng,onConfirm,onCancel}:{lat:number;lng:n
   const coordinate=importedCoordinate(place);m.stop();select(coordinate,m,true);
   m.flyTo({center:[coordinate.lng,coordinate.lat],zoom:16,duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:450});setImported(place);
  }
- async function importLink(){
+ async function importLink(text=importText){
   const sequence=++importSequence.current;setImportError('');setImported(null);setImportBusy(true);
   try{
-   const url=mapLinkURL(importText);let place=parseMapPoint(url.href);
+   const url=mapLinkURL(text);let place=parseMapPoint(url.href);
    if(!place){const result=await api<{url:string}>('/map-links/resolve','POST',{url:url.href});if(sequence!==importSequence.current)return;place=parseMapPoint(result.url);}
    if(sequence!==importSequence.current)return;
    if(!place)throw Error('链接中没有可提取的地点坐标，请打开原地图复制完整地点链接，或手动选点。');
    previewImport({...place,url:url.href});
   }catch(e){if(sequence===importSequence.current)setImportError((e as Error).message);}
   finally{if(sequence===importSequence.current)setImportBusy(false);}
+ }
+
+ async function pasteImport(){
+  // Clipboard reads must stay directly in the user's click gesture (including iOS).
+  try{
+   const text=await navigator.clipboard.readText();
+   if(!text.trim())throw Error('剪贴板为空');
+   setImportText(text);await importLink(text);
+  }catch{
+   setPasteFallback(true);setImportError('请在下方输入框长按粘贴，粘贴后会自动读取。');
+   requestAnimationFrame(()=>importInput.current?.focus());
+  }
  }
 
  const inputLat=parse(latitude),inputLng=parse(longitude);
@@ -72,7 +87,7 @@ export default function MapPicker({lat,lng,onConfirm,onCancel}:{lat:number;lng:n
   function key(e:KeyboardEvent){
    if(e.key==='Escape')onCancel();
    if(e.key==='Tab'){
-    const els=Array.from(dialog.current!.querySelectorAll<HTMLElement>('button,input,a,select,[tabindex="0"]')).filter(e=>!e.hasAttribute('disabled'));
+    const els=Array.from(dialog.current!.querySelectorAll<HTMLElement>('button,input,a,select,[tabindex="0"]')).filter(e=>!e.hasAttribute('disabled')&&!e.closest('[inert],[hidden]')&&e.getClientRects().length>0);
     const first=els[0],last=els[els.length-1];
     if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
    }
@@ -83,19 +98,20 @@ export default function MapPicker({lat,lng,onConfirm,onCancel}:{lat:number;lng:n
  return <div className="picker-backdrop" onClick={e=>{if(e.target===e.currentTarget)onCancel();}}><div className="picker-dialog" ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="picker-title">
   <div className="picker-heading"><h2 id="picker-title">选择位置</h2><button type="button" aria-label="取消选点" onClick={onCancel}>×</button></div>
   <form className="picker-import" onSubmit={e=>{e.preventDefault();void importLink();}}>
-   <label htmlFor="map-import-link">从地图导入</label>
-   <div className="picker-import-row"><input id="map-import-link" type="text" inputMode="url" autoComplete="off" maxLength={8192} placeholder="粘贴苹果地图或高德地图分享链接" value={importText} aria-describedby="map-import-status" aria-invalid={!!importError} onChange={e=>{++importSequence.current;setImportText(e.target.value);setImported(null);setImportError('');setImportBusy(false);}}/><button type="submit" disabled={importBusy||!importText.trim()}>{importBusy?'解析中…':'导入定位'}</button></div>
+   <div className="picker-import-row"><button type="button" disabled={importBusy} onClick={()=>void pasteImport()}>{importBusy?'读取中…':'粘贴导入链接'}</button></div>
+   <AnimatedPanel open={pasteFallback}><label className="picker-paste-fallback">从地图导入<input ref={importInput} id="map-import-link" type="text" inputMode="url" autoComplete="off" maxLength={8192} placeholder="长按粘贴地图分享链接" value={importText} aria-describedby="map-import-status" aria-invalid={!!importError} onChange={e=>{++importSequence.current;setImportText(e.target.value);setImported(null);setImportError('');setImportBusy(false);}} onPaste={e=>{const text=e.clipboardData.getData('text');e.preventDefault();setImportText(text);void importLink(text);}}/></label><button type="submit" disabled={importBusy||!importText.trim()}>读取链接</button></AnimatedPanel>
    <div id="map-import-status" className={`picker-import-status${importError?' invalid':''}`} role="status">{importError||(!imported?'支持地点链接或含链接的分享文字，导入后请核对落点。':<><a href={imported.url} target="_blank" rel="noopener noreferrer">{imported.name||'已导入地点'}</a><span> · {imported.provider==='apple'?'苹果地图':'高德地图'}{imported.corrected?' · 已校正坐标':''}</span></>)}</div>
    {imported?.canCorrect&&<label className="picker-import-correction"><input type="checkbox" checked={imported.corrected} onChange={e=>previewImport({...imported,corrected:e.target.checked})}/>校正国内地图偏移<span>落点偏移时切换并核对</span></label>}
   </form>
-  <form className="picker-coordinates" onSubmit={e=>{e.preventDefault();locate();}}>
+  <button type="button" className="picker-manual-toggle" aria-expanded={manual} aria-controls="picker-manual" onClick={()=>setManual(!manual)}>{manual?'收起经纬度选点':'经纬度选点'}</button>
+  <AnimatedPanel open={manual} id="picker-manual"><form className="picker-coordinates" onSubmit={e=>{e.preventDefault();locate();}}>
    <div className="picker-coordinate-row">
     <label>纬度<input aria-describedby="picker-coordinate-hint" type="text" inputMode="decimal" autoComplete="off" maxLength={32} value={latitude} placeholder="50.1109" aria-invalid={touched.lat&&!latOk} onChange={e=>{clearImport();setLatitude(e.target.value);}} onBlur={()=>setTouched(t=>({...t,lat:true}))}/></label>
     <label>经度<input aria-describedby="picker-coordinate-hint" type="text" inputMode="decimal" autoComplete="off" maxLength={32} value={longitude} placeholder="8.6821" aria-invalid={touched.lng&&!lngOk} onChange={e=>{clearImport();setLongitude(e.target.value);}} onBlur={()=>setTouched(t=>({...t,lng:true}))}/></label>
     <button type="submit" className="picker-locate">定位</button>
    </div>
    <p id="picker-coordinate-hint" role="status">{coordinateError||'WGS84 十进制度，南纬／西经用负数；也可点地图。'}</p>
-  </form>
+  </form></AnimatedPanel>
   <div className="picker-map"><div ref={node}/><div className="map-credit" style={{inset:'auto 4px 2px auto'}}>© <a href="https://openmaptiles.org/" target="_blank" rel="noreferrer">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a></div></div>
   {visibleError&&<p className="picker-warning" role="status">{visibleError}</p>}
   <div className="picker-actions"><span>{pending?'先定位或点击地图，检查标记后确认。':`${candidate!.lat}, ${candidate!.lng}`}</span><button type="button" className="solid" disabled={pending||importBusy||importPending} onClick={()=>candidate&&!pending&&!importBusy&&!importPending&&onConfirm(candidate.lat,candidate.lng,imported?{name:imported.name,address:imported.address,url:storedMapLink(imported)||''}:undefined)}>确认位置</button></div>

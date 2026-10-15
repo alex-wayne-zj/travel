@@ -2,7 +2,7 @@ import {useTimedMessage} from './useTimedMessage';
 import React,{useEffect,useRef,useState} from 'react';
 import {Map,Marker,LngLatBounds,setWorkerUrl,type GeoJSONSource} from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import {Plane,TrainFront,Car,Utensils,Landmark,BedDouble,Footprints,Trees,ShoppingBag,Ticket,Play,Pause,ChevronLeft,ChevronRight,Focus,RefreshCw} from 'lucide-react';
+import {Plane,TrainFront,Bus,Car,Utensils,Landmark,BedDouble,Footprints,Trees,ShoppingBag,Ticket,Play,Pause,ChevronLeft,ChevronRight,Focus,RefreshCw} from 'lucide-react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {api,type Trip} from './api';
 import Logo from './Logo';
@@ -13,9 +13,9 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 setWorkerUrl(workerUrl);
 
-const icons={flight:Plane,train:TrainFront,taxi:Car,food:Utensils,sight:Landmark,hotel:BedDouble,walk:Footprints,nature:Trees,visit:Landmark,shopping:ShoppingBag,activity:Ticket};
-const labels:Record<Kind,string>={flight:'航班',train:'跨城交通',taxi:'交通',food:'想吃',sight:'想去',hotel:'住宿',walk:'想去',nature:'自然',visit:'参观',shopping:'逛街',activity:'活动'};
-const colors:Record<Kind,string>={flight:'#4568ab',train:'#176764',taxi:'#b88228',food:'#b85739',sight:'#176764',hotel:'#776085',walk:'#6a7a60',nature:'#527b53',visit:'#176764',shopping:'#a26e46',activity:'#786789'};
+const icons={flight:Plane,train:TrainFront,bus:Bus,taxi:Car,food:Utensils,sight:Landmark,hotel:BedDouble,walk:Footprints,nature:Trees,visit:Landmark,shopping:ShoppingBag,activity:Ticket};
+const labels:Record<Kind,string>={flight:'航班',train:'跨城交通',bus:'巴士',taxi:'交通',food:'想吃',sight:'想去',hotel:'住宿',walk:'想去',nature:'自然',visit:'参观',shopping:'逛街',activity:'活动'};
+const colors:Record<Kind,string>={flight:'#4568ab',train:'#176764',bus:'#68826b',taxi:'#b88228',food:'#b85739',sight:'#176764',hotel:'#776085',walk:'#6a7a60',nature:'#527b53',visit:'#176764',shopping:'#a26e46',activity:'#786789'};
 const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 function Icon({kind,size=18}:{kind:Kind,size?:number}) {const I=icons[kind];return <I size={size}/>;}
 function MapStage({tripId,days,day,event,progress,scope,follow,onFollow,onSelect,onProvider,retry}:{tripId:string,days:Day[],day:Day,event:Event|undefined,progress:number,scope:'day'|'trip'|'event',follow:boolean,onFollow:(x:boolean)=>void,onSelect:(id:string)=>void,onProvider:(provider:'openfreemap'|'protomaps')=>void,retry:number}){

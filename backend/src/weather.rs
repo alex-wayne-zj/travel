@@ -9,7 +9,7 @@ use serde_json::{Value, json};
 use std::{collections::HashMap, process::Stdio, sync::OnceLock, time::Duration};
 use tokio::{io::AsyncReadExt, process::Command, sync::Mutex};
 
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 struct CachedForecast {
     updated: i64,
     data: Option<Value>,
@@ -17,10 +17,10 @@ struct CachedForecast {
 }
 impl CachedForecast {
     fn fresh(&self, time: i64) -> bool {
-        time < self.retry_after || (self.data.is_some() && time - self.updated < 3600)
+        time < self.retry_after || (self.data.is_some() && time - self.updated < 86400)
     }
     fn usable(self, time: i64) -> Result<Self, ApiError> {
-        if self.data.is_some() && time - self.updated <= 86400 {
+        if self.data.is_some() && time - self.updated <= 172800 {
             Ok(self)
         } else {
             Err(unavailable())
@@ -87,7 +87,7 @@ impl ForecastCache {
                 retry_after: 0,
             },
             Err(_) => match existing
-                .filter(|entry| entry.data.is_some() && completed - entry.updated <= 86400)
+                .filter(|entry| entry.data.is_some() && completed - entry.updated <= 172800)
             {
                 Some(mut entry) => {
                     entry.retry_after = completed + 120;
@@ -298,13 +298,60 @@ pub async fn daily(
         return Ok(Json(base));
     }
     let key = format!("{lat:.3},{lng:.3}");
-    let entry = CACHE
-        .get_or_init(ForecastCache::new)
-        .get(&key, || fetch(lat, lng))
+    let cache = CACHE.get_or_init(ForecastCache::new);
+    let db_key = key.clone();
+    let persisted: Option<CachedForecast> = app
+        .run(move |c| {
+            use rusqlite::OptionalExtension;
+            let raw: Option<String> = c
+                .query_row(
+                    "SELECT body FROM weather_cache WHERE location=?1",
+                    [&db_key],
+                    |r| r.get(0),
+                )
+                .optional()
+                .map_err(internal)?;
+            raw.map(|body| serde_json::from_str(&body).map_err(internal))
+                .transpose()
+        })
         .await?;
+    if let Some(entry) = &persisted {
+        let mut state = cache.state.lock().await;
+        // Never replace a newer in-flight result with an older database snapshot.
+        if state
+            .entries
+            .get(&key)
+            .is_none_or(|current| current.updated < entry.updated)
+        {
+            if state.entries.len() >= 128
+                && !state.entries.contains_key(&key)
+                && let Some(oldest) = state
+                    .entries
+                    .iter()
+                    .min_by_key(|(_, e)| e.updated)
+                    .map(|(k, _)| k.clone())
+            {
+                state.entries.remove(&oldest);
+            }
+            state.entries.insert(key.clone(), entry.clone());
+        }
+    }
+    let result = cache.get(&key, || fetch(lat, lng)).await;
+    let latest = cache.state.lock().await.entries.get(&key).cloned();
+    if let Some(latest) = latest.filter(|entry| Some(entry) != persisted.as_ref()) {
+        let body = serde_json::to_string(&latest).map_err(internal)?;
+        app.run(move |c| {
+            let tx = c.transaction().map_err(internal)?;
+            tx.execute("INSERT INTO weather_cache(location,updated_at,body) VALUES(?1,?2,?3) ON CONFLICT(location) DO UPDATE SET updated_at=excluded.updated_at,body=excluded.body WHERE excluded.updated_at>=weather_cache.updated_at", rusqlite::params![key,latest.updated,body]).map_err(internal)?;
+            tx.execute("DELETE FROM weather_cache WHERE location IN (SELECT location FROM weather_cache ORDER BY updated_at DESC,location LIMIT -1 OFFSET 128)", []).map_err(internal)?;
+            tx.commit().map_err(internal)?;
+            Ok(())
+        }).await?;
+    }
+    let entry = result?;
     let mut result = forecast(entry.data.as_ref().ok_or_else(unavailable)?, date);
     result["updatedAt"] = json!(entry.updated);
-    result["stale"] = json!(now() - entry.updated >= 3600);
+    result["stale"] = json!(now() - entry.updated >= 86400);
     base.as_object_mut()
         .unwrap()
         .extend(result.as_object().unwrap().clone());
@@ -314,6 +361,16 @@ pub async fn daily(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn refreshes_only_after_a_full_day() {
+        let entry = CachedForecast {
+            updated: 1000,
+            data: Some(json!({})),
+            retry_after: 0,
+        };
+        assert!(entry.fresh(1000 + 86399));
+        assert!(!entry.fresh(1000 + 86400));
+    }
     #[tokio::test]
     async fn fresh_cities_bypass_slow_fetch_and_same_city_misses_share_result() {
         use std::sync::{
@@ -375,7 +432,7 @@ mod tests {
     #[tokio::test]
     async fn failed_refresh_cools_down_preserves_age_and_never_serves_overage_data() {
         let cache = ForecastCache::new();
-        let updated = now() - 3601;
+        let updated = now() - 86401;
         cache.state.lock().await.entries.insert(
             "old".into(),
             CachedForecast {
@@ -416,7 +473,7 @@ mod tests {
         state.entries.insert(
             "expired".into(),
             CachedForecast {
-                updated: now() - 86401,
+                updated: now() - 172801,
                 data: Some(json!({})),
                 retry_after: 0,
             },

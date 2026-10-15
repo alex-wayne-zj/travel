@@ -6,13 +6,13 @@ export const slots=[
 ] as const;
 
 export const kinds:Record<Kind,string>={
- sight:'参观',food:'餐饮',walk:'步行',flight:'飞机',train:'火车',taxi:'打车',hotel:'住宿',nature:'自然',visit:'参观',shopping:'逛街',activity:'活动',
+ sight:'参观',food:'餐饮',walk:'步行',flight:'飞机',train:'火车',bus:'巴士',taxi:'打车',hotel:'住宿',nature:'自然',visit:'参观',shopping:'逛街',activity:'活动',
 };
 
 export function allowed(slot:Event['slot']):Kind[] {
  if(slot==='morning'||slot==='afternoon')return ['nature','visit','shopping','activity'];
  if(slot==='breakfast'||slot==='lunch'||slot==='dinner')return ['food'];
- if(slot==='transport')return ['flight','train','taxi','walk'];
+ if(slot==='transport')return ['flight','train','bus','taxi','walk'];
  if(slot==='stay')return ['hotel'];
  return Object.keys(kinds) as Kind[];
 }

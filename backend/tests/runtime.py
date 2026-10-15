@@ -3,6 +3,7 @@
 Uses a private temporary database and never prints credentials or session tokens.
 """
 import argparse
+from datetime import datetime, timezone
 import http.client
 import json
 import os
@@ -143,7 +144,9 @@ print(json.dumps({'overview':None if cached else pack,'days':{} if cached else {
             api_path = '/api/trips/' + trip['id']
             draft['version'] = 1
             draft['days'][0]['events'].reverse()
+            save_started = time.perf_counter()
             status, saved, _ = request('PUT', api_path, draft, cookie, csrf)
+            print(f'Save HTTP latency: {(time.perf_counter()-save_started)*1000:.1f} ms')
             assert status == 200 and saved['version'] == 2
             assert saved['days'] == draft['days']
             assert request('PUT', api_path, draft, cookie, csrf)[0] == 409
@@ -194,7 +197,46 @@ print(json.dumps({'overview':None if cached else pack,'days':{} if cached else {
             own_template['notes'] = 'friend private packing notes'
             assert request('PUT', '/api/packing-template', own_template, friend_cookie, friend_csrf)[0] == 200
             assert request('GET', '/api/packing-template', cookie=cookie)[1]['notes'] != own_template['notes']
-            assert request('DELETE', '/api/trips/' + friend_id, {'version': 1}, friend_cookie, friend_csrf)[0] == 204
+            # Template + current packing are one transaction, preserving this trip's choices.
+            own_template = request('GET', '/api/packing-template', cookie=friend_cookie)[1]
+            friend_trip = request('GET', '/api/trips/' + friend_id, cookie=friend_cookie)[1]
+            original = json.loads(json.dumps(friend_trip))
+            sibling_input = {k: v for k, v in draft.items() if k != 'version'}
+            status, sibling, _ = request('POST', '/api/trips', sibling_input, friend_cookie, friend_csrf)
+            assert status == 201
+            packing = friend_trip['packing']
+            kept, removed = own_template['items'][:2]
+            packing.update(extraItems=[{'id': 'private-extra', 'label': 'Private', 'category': 'Extra'}],
+                           checkedIds=[kept['id'], removed['id'], 'private-extra'],
+                           hiddenBaseIds=[kept['id'], removed['id']], notes='unsaved private reminder')
+            own_template['items'] = [{**kept, 'label': 'Updated'}, {'id': 'new-base', 'label': 'New', 'category': 'Base'}]
+            own_template['notes'] = 'Updated shared reminder'
+            payload = {**own_template, 'currentTrip': {'id': friend_id, 'version': 999, 'packing': packing}}
+            assert request('PUT', '/api/packing-template', payload, friend_cookie, friend_csrf)[0] == 409
+            assert request('GET', '/api/packing-template', cookie=friend_cookie)[1]['version'] == own_template['version']
+            payload['currentTrip']['version'] = original['version']
+            payload['version'] -= 1
+            assert request('PUT', '/api/packing-template', payload, friend_cookie, friend_csrf)[0] == 409
+            assert request('GET', '/api/trips/' + friend_id, cookie=friend_cookie)[1] == original
+            payload['version'] += 1
+            payload['currentTrip']['id'] = trip['id']
+            assert request('PUT', '/api/packing-template', payload, friend_cookie, friend_csrf)[0] == 404
+            payload['currentTrip']['id'] = friend_id
+            status, applied, _ = request('PUT', '/api/packing-template', payload, friend_cookie, friend_csrf)
+            assert status == 200 and applied['trip']['version'] == original['version'] + 1
+            result = applied['trip']['packing']
+            assert result['baseItems'] == own_template['items'] and result['baseNotes'] == own_template['notes']
+            assert result['checkedIds'] == [kept['id'], 'private-extra'] and result['hiddenBaseIds'] == [kept['id']]
+            assert result['extraItems'] == packing['extraItems'] and result['notes'] == packing['notes']
+            assert request('GET', '/api/trips/' + sibling['id'], cookie=friend_cookie)[1] == sibling
+            assert request('DELETE', '/api/trips/' + sibling['id'], {'version': 1}, friend_cookie, friend_csrf)[0] == 204
+            future = {k: v for k, v in draft.items() if k != 'version'}
+            status, created, _ = request('POST', '/api/trips', future, friend_cookie, friend_csrf)
+            assert status == 201 and created['packing']['baseItems'] == own_template['items']
+            assert created['packing']['baseNotes'] == own_template['notes']
+            assert request('GET', api_path, cookie=cookie)[1] == saved
+            assert request('DELETE', '/api/trips/' + created['id'], {'version': 1}, friend_cookie, friend_csrf)[0] == 204
+            assert request('DELETE', '/api/trips/' + friend_id, {'version': applied['trip']['version']}, friend_cookie, friend_csrf)[0] == 204
             assert request('POST', '/api/logout', cookie=friend_cookie, csrf=friend_csrf)[0] == 204
             status, friend_session, friend_cookie = request('POST', '/api/invite-login', {'name': 'DemoAlice', 'code': friend_code})
             assert status == 200
@@ -206,8 +248,28 @@ print(json.dumps({'overview':None if cached else pack,'days':{} if cached else {
             with sqlite3.connect(root / 'backup.db') as backup:
                 assert backup.execute('PRAGMA integrity_check').fetchone()[0] == 'ok'
                 assert backup.execute('SELECT version FROM trips WHERE id=?', (trip['id'],)).fetchone()[0] == 2
+            # Preseed today's persistent forecast, then restart the actual process.
+            today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            weather_updated = int(time.time()) - 23 * 3600
+            weather_body = {'updated': weather_updated, 'retry_after': 0, 'data': {'daily': {
+                'time': ['2026-10-12'], 'weather_code': [3], 'temperature_2m_min': [12],
+                'temperature_2m_max': [19], 'precipitation_probability_max': [30]}}}
+            with sqlite3.connect(root / 'travel.db') as cache_db:
+                weather_trip = json.loads(cache_db.execute('SELECT body FROM trips WHERE id=?', (trip['id'],)).fetchone()[0])
+                weather_trip['days'][0]['date'] = today
+                weather_body['data']['daily']['time'] = [today]
+                cache_db.execute('UPDATE trips SET body=? WHERE id=?', (json.dumps(weather_trip), trip['id']))
+                cache_db.execute('INSERT INTO weather_cache VALUES(?,?,?)', ('-33.860,151.210', weather_updated, json.dumps(weather_body)))
             stop()
             start()
+            weather_started = time.perf_counter()
+            status, forecast, _ = request('GET', api_path + '/weather/day-1', cookie=cookie)
+            assert status == 200 and forecast['status'] == 'ready' and forecast['updatedAt'] == weather_updated
+            assert forecast['low'] == 12 and forecast['high'] == 19 and not forecast['stale']
+            assert time.perf_counter() - weather_started < 1, 'persisted forecast should not contact provider'
+            with sqlite3.connect(root / 'travel.db') as cache_db:
+                cache_db.execute('UPDATE trips SET body=? WHERE id=?', (json.dumps(saved), trip['id']))
+            print('PASS: 23-hour forecast survives process restart without refreshing')
             status, restored, _ = request('GET', api_path, cookie=cookie)
             assert status == 200 and restored['version'] == 2
             assert restored['days'] == draft['days']

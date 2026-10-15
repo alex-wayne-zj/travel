@@ -29,7 +29,7 @@ async function setup(width){
 }
 async function edit(page){await page.getByRole('button',{name:'编辑',exact:true}).click();await page.locator('.trip-editor').waitFor();}
 async function open(page,title){const card=page.locator('.editor-event').filter({has:page.locator('.editor-event-heading strong').filter({hasText:title})});await card.locator('.editor-event-heading').click();await card.locator('.editor-event-fields').waitFor();return card;}
-async function picker(page,location){await location.getByRole('button',{name:/地图选点/}).click();const modal=page.getByRole('dialog');await modal.locator('canvas').waitFor();return modal;}
+async function picker(page,location){await location.getByRole('button',{name:/地图选点/}).click();const modal=page.getByRole('dialog');await modal.locator('canvas').waitFor();await modal.getByRole('button',{name:'经纬度选点',exact:true}).click();return modal;}
 async function setPoint(modal,lat,lng){await modal.getByRole('textbox',{name:'纬度',exact:true}).fill(lat);await modal.getByRole('textbox',{name:'经度',exact:true}).fill(lng);await modal.getByRole('button',{name:'定位',exact:true}).click();await modal.page().waitForFunction(()=>!document.querySelector('.picker-actions button').disabled);}
 async function confirm(modal){await modal.getByRole('button',{name:'确认位置',exact:true}).click();await modal.waitFor({state:'hidden'});}
 async function centered(modal){await modal.page().waitForFunction(()=>{const map=document.querySelector('.picker-map canvas').getBoundingClientRect(),pin=document.querySelector('.picker-map .maplibregl-marker')?.getBoundingClientRect();return pin&&Math.abs(pin.left+pin.width/2-map.left-map.width/2)<3&&Math.abs(pin.top+pin.height/2-map.top-map.height/2)<=pin.height/2;},null,{timeout:10000});}

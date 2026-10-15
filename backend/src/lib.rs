@@ -147,6 +147,8 @@ impl App {
                 .map_err(|e| e.to_string())?;
             }
         }
+        // Additive, disposable cache: older releases can ignore it during rollback.
+        tx.execute_batch("CREATE TABLE IF NOT EXISTS weather_cache(location TEXT PRIMARY KEY,updated_at INTEGER NOT NULL,body TEXT NOT NULL);").map_err(|e| e.to_string())?;
         tx.commit().map_err(|e| e.to_string())?;
         let app = Self {
             db: Arc::new(Mutex::new(conn)),
@@ -513,11 +515,7 @@ fn load_auth(c: &Connection, hashed: &str) -> Result<Auth, ApiError> {
         .map_err(internal)?
         .ok_or_else(unauthorized)?
     };
-    c.execute(
-        "UPDATE sessions SET last_seen=?1 WHERE token_hash=?2",
-        params![n, hashed],
-    )
-    .map_err(internal)?;
+    // Session expiry is fixed at login; reads must not force synchronous disk writes.
     Ok(Auth {
         hash: hashed.into(),
         csrf,
@@ -917,34 +915,72 @@ async fn get_template(
     })
     .await
 }
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct TemplateTrip {
+    id: String,
+    version: i64,
+    packing: Packing,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct TemplateUpdate {
+    items: Vec<Item>,
+    notes: String,
+    version: i64,
+    current_trip: Option<TemplateTrip>,
+}
 async fn update_template(
     State(app): State<App>,
     axum::Extension(a): axum::Extension<Auth>,
-    Json(mut t): Json<Template>,
-) -> Result<Json<Template>, ApiError> {
+    Json(input): Json<TemplateUpdate>,
+) -> Result<Json<Value>, ApiError> {
+    let mut t = Template { items: input.items, notes: input.notes, version: input.version };
     model::validate_template(&t).map_err(bad)?;
     if t.version == i64::MAX {
         return Err(bad("invalid version"));
     }
     app.run(move |c| {
         let live = load_auth(c, &a.hash)?;
+        // Save the template and this trip together: conflicts must leave both unchanged.
+        let tx = c.transaction().map_err(internal)?;
+        let trip = if let Some(current) = input.current_trip {
+            if current.version < 1 || current.version == i64::MAX {
+                return Err(bad("invalid trip version"));
+            }
+            let mut trip = read_trip(&tx, &current.id, &live.account_id)?;
+            if trip.input.version != Some(current.version) {
+                return Err(conflict());
+            }
+            trip.input.packing = current.packing;
+            let packing = &mut trip.input.packing;
+            packing.base_items = Some(t.items.clone());
+            packing.base_notes = Some(t.notes.clone());
+            // Keep per-trip choices for surviving IDs, and discard removed template IDs.
+            packing.hidden_base_ids.retain(|id| t.items.iter().any(|item| &item.id == id));
+            packing.checked_ids.retain(|id| t.items.iter().chain(&packing.extra_items).any(|item| &item.id == id));
+            trip.input.version = Some(current.version + 1);
+            model::validate_trip(&trip.input).map_err(bad)?;
+            trip.updated_at = now().max(trip.updated_at + 1);
+            tx.execute(
+                "UPDATE trips SET body=?1,version=?2,updated_at=?3 WHERE id=?4 AND owner_id=?5",
+                params![serde_json::to_string(&trip).map_err(internal)?, trip.input.version, trip.updated_at, trip.id, live.account_id],
+            ).map_err(internal)?;
+            Some(trip)
+        } else { None };
         let expected = t.version;
         t.version += 1;
-        let affected = c
-            .execute(
-                "UPDATE packing_template SET body=?1,version=?2 WHERE owner_id=?4 AND version=?3",
-                params![
-                    serde_json::to_string(&t).map_err(internal)?,
-                    t.version,
-                    expected,
-                    live.account_id
-                ],
-            )
-            .map_err(internal)?;
+        let affected = tx.execute(
+            "UPDATE packing_template SET body=?1,version=?2 WHERE owner_id=?4 AND version=?3",
+            params![serde_json::to_string(&t).map_err(internal)?, t.version, expected, live.account_id],
+        ).map_err(internal)?;
         if affected == 0 {
             return Err(conflict());
         }
-        Ok(Json(t))
+        tx.commit().map_err(internal)?;
+        let mut result = serde_json::to_value(&t).map_err(internal)?;
+        if let Some(trip) = trip { result["trip"] = serde_json::to_value(trip).map_err(internal)?; }
+        Ok(Json(result))
     })
     .await
 }

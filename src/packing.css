@@ -62,3 +62,13 @@
 }
 
 @media(max-width:700px){.packing-tool-actions{width:100%;margin:0}.packing-tool-actions button{flex:1;padding-inline:8px}.packing-tools{gap:4px}.packing-save-hint{line-height:18px}}
+
+/* Inset focus rings stay visible inside the animated panel's overflow clip. */
+.packing-page .template-row{display:grid;grid-template-columns:minmax(0,140px) minmax(0,1fr) 36px;align-items:center}
+.packing-page .template-row input{min-width:0}
+.packing-page .template-row button{min-width:36px;min-height:44px;padding:0}
+.packing-page input:not([type=checkbox]):focus-visible,.packing-page textarea:focus-visible{outline:2px solid #317966;outline-offset:-2px}
+@media(max-width:700px){
+ .packing-page .template-row{grid-template-columns:minmax(0,90px) minmax(0,1fr) 36px;gap:8px}
+ .packing-page .template-row input,.packing-page .extra-row input,.packing-page .template-editor textarea{font-size:16px;min-height:44px}
+}

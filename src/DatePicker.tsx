@@ -52,7 +52,7 @@ export default function DatePicker({label,value,onChange,onValidate,error,rangeS
  useLayoutEffect(()=>{if(open&&manual)manualInput.current?.focus({preventScroll:true});},[open,manual]);
  const tabDate=cells.some(d=>iso(d)===focused)?focused:iso(month);
  return <div className="date-field" ref={field}>
-  <span className="field-label" id={id}>{label}</span>
+  <span className="field-label" id={id}>{label}<span className="required-mark" aria-hidden="true">必填</span></span>
   <button className="date-value" ref={trigger} type="button" aria-labelledby={id} aria-describedby={id+'-value '+id+'-error'} aria-invalid={!!error} aria-haspopup="dialog" aria-expanded={open} aria-controls={id+'-calendar'} disabled={disabled} onClick={()=>open?close():show()} onBlur={e=>{if(!field.current?.contains(e.relatedTarget)&&!panel.current?.contains(e.relatedTarget))onValidate();}}><span id={id+'-value'} className={!value?'field-placeholder':''}>{value?value.replaceAll('-','/'):'请选择日期'}</span><CalendarDays size={17}/></button>
   <p className="field-feedback" id={id+'-error'} aria-live="polite">{error||' '}</p>
   {present&&createPortal(<div className={`date-calendar motion-popover${expanded?' expanded':''}`} aria-hidden={!open} inert={!open} ref={panel} id={id+'-calendar'} role="dialog" aria-label={`${label}日历`} style={position} onKeyDown={panelTab}>

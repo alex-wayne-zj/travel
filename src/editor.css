@@ -75,3 +75,7 @@
 .editor-location{min-width:0}.editor-map-link{display:inline-block;margin-top:5px;padding:8px 0;color:#176764;font-size:12px;text-underline-offset:3px}
 
 .editor-kind-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 10px;min-width:0}
+
+.required-mark{display:inline!important;margin-left:6px;font-size:10px!important;font-weight:400;color:#956747!important;white-space:nowrap}.trip-editor label:has(>.required-mark){display:block}.trip-editor label:has(>.required-mark)>input{display:block;margin-top:6px}
+/* Inset focus stays visible inside animated panels' overflow clipping. */
+.editor-kind-fields input:focus-visible,.editor-kind-fields select:focus-visible,.editor-kind-fields textarea:focus-visible{outline-offset:-2px}

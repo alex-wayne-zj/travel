@@ -5,6 +5,19 @@ import type {Day} from './model';
 import './weather.css';
 
 interface DailyWeather {status:'ready'|'past'|'future'|'no-location'|'unavailable';city:string;reference?:string;code?:number;low?:number;high?:number;precipitation?:number|null;updatedAt?:number;stale?:boolean}
+const forecasts=new Map<string,{data:DailyWeather;expires:number}>();
+const requests=new Map<string,Promise<DailyWeather>>();
+function loadWeather(key:string,trip:Trip,day:Day):Promise<DailyWeather>{
+ const cached=forecasts.get(key);if(cached&&Date.now()<cached.expires)return Promise.resolve(cached.data);
+ const pending=requests.get(key);if(pending)return pending;
+ const request=api<DailyWeather>(`/trips/${encodeURIComponent(trip.id)}/weather/${encodeURIComponent(day.id)}`).catch(()=>({status:'unavailable',city:day.city} as DailyWeather)).then(data=>{
+  const age=data.status==='unavailable'||data.stale?120000:86400000;
+  const expires=data.updatedAt&&!data.stale?Math.min(Date.now()+age,data.updatedAt*1000+86400000):Date.now()+age;
+  if(forecasts.size>=128)forecasts.delete(forecasts.keys().next().value!);
+  forecasts.set(key,{data,expires});return data;
+ }).finally(()=>requests.delete(key));
+ requests.set(key,request);return request;
+}
 export function weatherDescription(code:number):[string,typeof Sun] {
  if(code===0)return ['晴',Sun];
  if(code===1)return ['晴间多云',CloudSun];
@@ -21,13 +34,13 @@ export function weatherDescription(code:number):[string,typeof Sun] {
  return ['天气状况未知',Cloud];
 }
 export default function WeatherCard({trip,day}:{trip:Trip;day:Day}) {
- const key=`${trip.id}/${trip.version}/${day.id}`;
+ const key=JSON.stringify([trip.id,day.id,day.date,day.city,day.events.map(e=>[e.kind,e.slot,e.alternative,e.lat,e.lng,e.title,e.to])]);
  const [state,setState]=useState<{key:string;data:DailyWeather}|null>(null);
  useEffect(()=>{
   let cancelled=false;
-  const load=()=>api<DailyWeather>(`/trips/${encodeURIComponent(trip.id)}/weather/${encodeURIComponent(day.id)}`).then(data=>{if(!cancelled)setState({key,data});}).catch(()=>{if(!cancelled)setState({key,data:{status:'unavailable',city:day.city}});});
+  const load=()=>loadWeather(key,trip,day).then(data=>{if(!cancelled)setState({key,data});});
   void load();
-  const timer=window.setInterval(()=>{if(!document.hidden)void load();},3600000);
+  const timer=window.setInterval(()=>{if(!document.hidden)void load();},60000);
   return()=>{cancelled=true;window.clearInterval(timer);};
  },[key]);
  const data=state?.key===key?state.data:null;

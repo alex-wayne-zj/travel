@@ -37,8 +37,8 @@ export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onP
    <strong>{e.title||'新活动 · 待填写'}</strong><span>{open?'−':'＋'}</span>
   </button></div>
   <AnimatedEventBody open={open} id={`event-body-${e.id}`}><div className="editor-event-fields">
-   <label className="editor-wide">名称
-    <input maxLength={300} value={e.title} onChange={x=>onChange({title:x.target.value})}/>
+   <label className="editor-wide">名称<span className="required-mark" aria-hidden="true">必填</span>
+    <input required aria-label="名称" maxLength={300} value={e.title} onChange={x=>onChange({title:x.target.value})}/>
    </label>
    <label>类型
     <select aria-label="类型" value={editorKind(e)} onChange={x=>onChange({kind:x.target.value as Kind})}>
@@ -70,14 +70,14 @@ export default function EditorEvent({event:e,open,onToggle,onChange,onDelete,onP
    <label className="editor-wide">参考链接
     <input type="url" maxLength={500} value={e.sourceUrl||''} onChange={x=>onChange({sourceUrl:x.target.value||undefined})}/>
    </label>
-   {['flight','train','taxi','walk'].includes(e.kind)&&<>
+   {['flight','train','bus','taxi','walk'].includes(e.kind)&&<>
     <label className="editor-wide editor-checkbox">
      <input type="checkbox" checked={!!e.to} onChange={x=>onChange({to:x.target.checked?{name:'',lat:NaN,lng:NaN}:undefined})}/>
      添加交通终点
     </label>
     <AnimatedPanel open={!!e.to} className="editor-wide" contentClassName="editor-kind-fields">{to&&<>
-     <label className="editor-wide">终点名称
-      <input maxLength={300} value={to.name} onChange={x=>onChange({to:{...e.to!,name:x.target.value}})}/>
+     <label className="editor-wide">终点名称<span className="required-mark" aria-hidden="true">必填</span>
+      <input required aria-label="终点名称" maxLength={300} value={to.name} onChange={x=>onChange({to:{...e.to!,name:x.target.value}})}/>
      </label>
      <LocationEditor lat={to.lat} lng={to.lng} label="交通终点" onChange={(lat,lng,place)=>onChange({to:{...e.to!,lat,lng,...(!e.to!.name.trim()&&place?.name?{name:place.name}:{})}})} onPick={onPick}/>
     </>}</AnimatedPanel>

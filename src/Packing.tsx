@@ -23,8 +23,8 @@ export default function PackingPage({trip,template,onSaved,onTemplate,onDirty}:{
   finally{setBusy(false);}
  }
  async function saveTemplate(){
-  setBusy(true);setError('');
-  try{const t=await api<Template>('/packing-template','PUT',shared);setShared(t);onTemplate(t);setMessage('共用模板已保存，仅用于之后创建的旅程');}
+  setBusy(true);setError('');setMessage('');
+  try{const {trip:updated,...t}=await api<Template&{trip:Trip}>('/packing-template','PUT',{...shared,currentTrip:{id:trip.id,version:trip.version,packing:draft}});setShared(t);onTemplate(t);setDraft(structuredClone(updated.packing));onSaved(updated);setMessage('共用模板已应用到当前旅程，之后新建旅程也将使用');}
   catch(e){reportError((e as Error).message);}
   finally{setBusy(false);}
  }
@@ -90,7 +90,7 @@ export default function PackingPage({trip,template,onSaved,onTemplate,onDirty}:{
     </section></AnimatedPanel>
     <AnimatedPanel open={editingTemplate} id="packing-template-body"><section className="template-editor packing-template-body" aria-label="共用模板">
      <h2>共用模板</h2>
-      <p className="muted">已有旅行保留创建时的清单与提醒。模板不会覆盖其他旅程。</p>
+      <p className="muted">保存后应用到当前旅程及之后新建的旅程，保留本次补充物品、勾选和个人提醒。</p>
       {shared.items.map((item,n)=><div className="template-row" key={item.id}>
        <input aria-label="模板分类" maxLength={80} value={item.category} onChange={e=>setShared({...shared,items:shared.items.map((x,k)=>k===n?{...x,category:e.target.value}:x)})}/>
        <input aria-label="模板物品" maxLength={200} value={item.label} onChange={e=>setShared({...shared,items:shared.items.map((x,k)=>k===n?{...x,label:e.target.value}:x)})}/>
@@ -98,7 +98,7 @@ export default function PackingPage({trip,template,onSaved,onTemplate,onDirty}:{
       </div>)}
       <button className="quiet" disabled={shared.items.length>=100} onClick={()=>setShared({...shared,items:[...shared.items,{id:crypto.randomUUID(),label:'',category:'日用'} as PackingItem]})}>＋ 添加模板物品</button>
       <textarea aria-label="共用提醒" maxLength={10000} rows={5} value={shared.notes} onChange={e=>setShared({...shared,notes:e.target.value})}/>
-      <button className="solid" disabled={busy||shared.items.some(i=>!i.label.trim()||!i.category.trim())} onClick={saveTemplate}>保存共用模板</button>
+      <button className="solid" disabled={busy||draft.extraItems.some(i=>!i.label.trim())||shared.items.some(i=>!i.label.trim()||!i.category.trim())} onClick={saveTemplate}>保存共用模板</button>
     </section></AnimatedPanel>
    </fieldset>
   </div>

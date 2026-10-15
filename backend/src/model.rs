@@ -194,8 +194,8 @@ pub fn validate_trip(t: &TripInput) -> Result<(), String> {
             text(e, "title", 300, true)?;
             let kind = text(e, "kind", 20, true)?.unwrap();
             if ![
-                "flight", "train", "taxi", "food", "sight", "hotel", "walk", "nature", "visit",
-                "shopping", "activity",
+                "flight", "train", "bus", "taxi", "food", "sight", "hotel", "walk", "nature",
+                "visit", "shopping", "activity",
             ]
             .contains(&kind)
             {
@@ -222,7 +222,7 @@ pub fn validate_trip(t: &TripInput) -> Result<(), String> {
                         ["sight", "walk", "nature", "visit", "shopping", "activity"].contains(&kind)
                     }
                     "breakfast" | "lunch" | "dinner" => kind == "food",
-                    "transport" => ["flight", "train", "taxi", "walk"].contains(&kind),
+                    "transport" => ["flight", "train", "bus", "taxi", "walk"].contains(&kind),
                     "stay" => kind == "hotel",
                     "alternative" => true,
                     _ => false,

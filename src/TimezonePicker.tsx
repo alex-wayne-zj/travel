@@ -14,7 +14,7 @@ export default function TimezonePicker({value,onChange,date,countryIds,other,err
  if(value&&!options.some(zone=>zone.value===value))options.unshift({value,label:offsetLabel(value,date)});
  const label=countryZones(countryIds).find(zone=>zone.value===value)?.label||value;
  return <section className="timezone-field" aria-label="行程时区">
-  <div className="timezone-heading"><span className="field-label">行程时区</span><span className="field-label">{local?'当地时区':'东 / 西时区'}</span></div>
+  <div className="timezone-heading"><span className="field-label">行程时区<span className="required-mark" aria-hidden="true">必填</span></span><span className="field-label">{local?'当地时区':'东 / 西时区'}</span></div>
   {local?<output className="timezone-value" aria-label="绑定时区">{label}</output>:<select aria-label="行程时区" aria-invalid={!!error} aria-describedby="timezone-feedback" value={value} onBlur={onBlur} onChange={e=>onChange(e.target.value)}><option value="" disabled>请选择时区</option>{options.map(zone=><option key={zone.value} value={zone.value}>{zone.label}</option>)}</select>}
   <div className="timezone-help">{offsetLabel(value,date)}；此旅程统一使用一个时区。</div>
   <p className="field-feedback" id="timezone-feedback" aria-live="polite">{error||' '}</p>
